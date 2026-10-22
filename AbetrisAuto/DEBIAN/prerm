@@ -1,0 +1,5 @@
+#!/bin/sh
+# Keep astra.conf, the abertis binary and softcam.key untouched.
+rm -f /etc/systemd/system/enigma2.service.d/abertis-lamedb.conf 2>/dev/null || true
+systemctl daemon-reload >/dev/null 2>&1 || true
+exit 0

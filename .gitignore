@@ -1,0 +1,30 @@
+# GitHub ignore list for Abetris Auto Switcher PRO plugin
+# Exclude build artifacts, screenshots, and temporary files
+
+# IPK packages (built binaries)
+*.ipk
+
+# Screenshots / OSD images
+*.png
+
+# IPK build directory
+/dist/
+/build/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backups
+abetris-backup/
+
+# Temporary files
+*.tmp
+*.tmp*
+*.swp
+*~

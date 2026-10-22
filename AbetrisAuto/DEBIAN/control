@@ -1,0 +1,15 @@
+Package: enigma2-plugin-extensions-abertisauto
+Version: 1.9.6
+Architecture: all
+Maintainer: AbertisAuto <abertisauto@example.com>
+Depends: enigma2
+Section: extras
+Priority: optional
+Description: Abertis Auto - automatic setup for every Abertis feed
+  Generates an astra stream and an OSCam-EMU A-rule for every
+  "Abertis PID <n>" feed in lamedb, then handles any Ciefp
+  /abertis/pid<n> URL automatically with an F1 learning phase and
+  F5 playback phase. 8008 is automated too, even though the feed is
+  currently off-air. Every config change is backed up, only missing
+  entries are appended, astra restarts are guarded and playback is
+  verified from the native decoder information.

@@ -1,0 +1,152 @@
+#!/bin/sh
+set -e
+PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto"
+
+chmod 755 "$PLUGIN_DIR" 2>/dev/null || true
+chmod 644 "$PLUGIN_DIR"/*.py 2>/dev/null || true
+chmod 755 "$PLUGIN_DIR/prestart_fix.py" 2>/dev/null || true
+
+# Never let DreamOS load a stale byte-code file after an upgrade.
+rm -f "$PLUGIN_DIR"/*.pyo "$PLUGIN_DIR"/*.pyc 2>/dev/null || true
+
+# Never overwrite the working /etc/astra/scripts/abertis.  astra.conf is only
+# extended with missing Abertis streams (one backup, existing blocks kept);
+# softcam.key is only merged with the Abertis BISS keys (left untouched when
+# it cannot be read).
+
+# Fix lamedb on disk before enigma2 starts (enigma2 saves its in-memory DB at
+# shutdown, so a post-start fix alone is too late).
+mkdir -p /etc/systemd/system/enigma2.service.d 2>/dev/null || true
+if ! cat > /etc/systemd/system/enigma2.service.d/abertis-lamedb.conf 2>/dev/null <<'EOF'
+[Service]
+ExecStartPre=-/usr/bin/python /usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/prestart_fix.py
+EOF
+then
+  echo "Abertis Auto: could not write the systemd drop-in (continuing)" >&2
+fi
+systemctl daemon-reload >/dev/null 2>&1 || true
+
+# Start astra at boot even on a clean DreamOS image where the astra-sm
+# package does not ship an init script.  Never overwrite an existing one.
+if [ -x /usr/bin/astra ] && [ ! -e /etc/init.d/astra-sm ]; then
+  if cat > /etc/init.d/astra-sm 2>/dev/null <<'ASTRA_INIT_EOF'
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          astra-sm
+# Required-Start:    $local_fs $network
+# Required-Stop:     $local_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: astra-sm streaming (Abertis T2-MI de-encapsulation)
+### END INIT INFO
+
+DAEMON=/usr/bin/astra
+CONF=/etc/astra/astra.conf
+PIDFILE=/var/run/astra.pid
+LOGFILE=/tmp/astra.log
+
+is_running() {
+    pidof astra >/dev/null 2>&1
+}
+
+case "$1" in
+    start)
+        if is_running; then
+            echo "astra-sm already running"
+            exit 0
+        fi
+        [ -x "$DAEMON" ] || { echo "astra binary missing"; exit 1; }
+        [ -f "$CONF" ] || { echo "astra.conf missing"; exit 1; }
+        rm -f "$PIDFILE"
+        nohup "$DAEMON" --pid "$PIDFILE" --log "$LOGFILE" "$CONF" >/dev/null 2>&1 &
+        sleep 1
+        if is_running; then
+            echo "astra-sm started"
+            exit 0
+        fi
+        echo "astra-sm failed to start"
+        exit 1
+        ;;
+    stop)
+        if [ -f "$PIDFILE" ]; then
+            kill "$(cat "$PIDFILE")" 2>/dev/null
+        fi
+        for p in $(pidof astra); do
+            kill "$p" 2>/dev/null
+        done
+        rm -f "$PIDFILE"
+        echo "astra-sm stopped"
+        ;;
+    restart)
+        "$0" stop
+        sleep 1
+        "$0" start
+        ;;
+    status)
+        if is_running; then
+            echo "astra-sm running (pid $(pidof astra))"
+            exit 0
+        fi
+        echo "astra-sm stopped"
+        exit 3
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit 0
+ASTRA_INIT_EOF
+  then
+    chmod 755 /etc/init.d/astra-sm 2>/dev/null || true
+  fi
+fi
+if [ -x /usr/bin/astra ] && [ ! -e /etc/systemd/system/astra-sm.service ]; then
+  if cat > /etc/systemd/system/astra-sm.service 2>/dev/null <<'ASTRA_UNIT_EOF'
+[Unit]
+Description=Astra SM (Abertis T2-MI de-encapsulation)
+After=network.target enigma2.service
+
+[Service]
+Type=forking
+PIDFile=/var/run/astra.pid
+ExecStart=/etc/init.d/astra-sm start
+ExecStop=/etc/init.d/astra-sm stop
+TimeoutStartSec=30
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=graphical.target
+ASTRA_UNIT_EOF
+  then
+    chmod 644 /etc/systemd/system/astra-sm.service 2>/dev/null || true
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl enable astra-sm.service >/dev/null 2>&1 || true
+  fi
+fi
+
+# Enable the image's OSCam unit so descrambling works after a cold boot.
+# The DreamOS image ships it disabled; enable only the unit whose binary
+# exists and never change its configuration or the binary itself.
+if [ -x /usr/bin/OSCam_11964-803 ] && [ -e /lib/systemd/system/OSCam_11964-803.service ]; then
+  systemctl enable OSCam_11964-803.service >/dev/null 2>&1 || true
+fi
+
+# Apply now as well (idempotent); the next boot uses the ExecStartPre hook.
+/usr/bin/python "$PLUGIN_DIR/prestart_fix.py" >/dev/null 2>&1 || true
+
+# Install the OSCam-EMU A-rules and astra streams of every Abertis feed in
+# lamedb.  Both installers are idempotent, back up once and only append
+# missing entries.  A controlled restart happens only when a file changed.
+/usr/bin/python -c "
+import sys
+sys.path.insert(0, '/usr/lib/enigma2/python/Plugins/Extensions')
+from AbetrisAuto import setup
+ok, messages = setup.apply_all_feeds(restart=True)
+for msg in messages:
+    print(msg)
+" >>/tmp/abetris_postinst.log 2>&1 || true
+
+echo "Abertis Auto Switcher PRO 1.9.6 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
+exit 0
