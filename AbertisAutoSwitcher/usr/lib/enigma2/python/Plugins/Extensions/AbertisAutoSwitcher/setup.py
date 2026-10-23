@@ -339,17 +339,21 @@ def install_astra():
 def ensure_astra_conf():
     # A fresh DreamOS image ships an astra.conf in the native astra-sm
     # format (input { ... } / output { ... }).  That file is not the
-    # Abertis template and mixing the two formats makes astra crash, so
-    # replace it.  A file that already contains the Abertis streams is
-    # kept as is.
+    # Abertis template: appended Abertis streams would be mixed with the
+    # native blocks and make astra crash.  Replace it in that case.  A
+    # file that is already the Abertis template (or that has no foreign
+    # blocks) is kept as is.
     if os.path.exists(ASTRA_CONF):
         try:
             with open(ASTRA_CONF, "r") as f:
                 text = f.read()
-            if "make_channel" in text:
+            if "input {" in text and 'type = "dvb"' in text:
+                logger.log("astra.conf is a foreign template - replacing it")
+            elif "make_channel" in text:
                 logger.log("astra.conf already exists, keeping it")
                 return True
-            logger.log("astra.conf is a foreign template - replacing it")
+            else:
+                logger.log("astra.conf is empty or unknown - replacing it")
         except Exception:
             pass
     try:
@@ -1078,14 +1082,14 @@ def run_full_setup(restart_configs=True):
                 logger.log(msg)
             else:
                 logger.log("astra.conf updated - a controlled astra restart is required")
-        elif tools_changed:
-            # the astra binary itself was replaced: it only takes effect
-            # with a restart
+        elif tools_changed or oscam_ok:
+            # the astra binary or oscam was (re)started: make sure astra
+            # itself is up as well
             if restart_configs:
                 ok, msg = controlled_astra_restart()
                 logger.log(msg)
             else:
-                logger.log("astra binary updated - a controlled astra restart is required")
+                logger.log("astra restart required")
         restart_astra()
     # Keep the OSCam binary and every existing config directive untouched apart
     # from the backed-up A-rules above.

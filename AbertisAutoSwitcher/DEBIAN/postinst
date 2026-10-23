@@ -166,5 +166,5 @@ if [ -x /usr/bin/OSCam_11964-803 ] && ! pidof OSCam_11964-803 >/dev/null 2>&1; t
     /usr/bin/OSCam_11964-803 -b >/tmp/abetris_oscam.log 2>&1 || true
 fi
 
-echo "Abertis Auto Switcher PRO 1.9.9 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
+echo "Abertis Auto Switcher PRO 1.9.10 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
 exit 0
