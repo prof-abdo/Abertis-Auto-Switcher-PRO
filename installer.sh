@@ -20,11 +20,12 @@ RELEASE="v1.9.7"
 PKG="enigma2-plugin-extensions-abertisautoswitcher"
 BACKUP_DIR="/root/abetris-backup"
 TMP="/tmp/abertisautoswitcher-install.$$"
+PKG_DIR=""
 
 say()  { echo "[abertis-auto-switcher] $*"; }
 die()  { echo "[abertis-auto-switcher] ERROR: $*" >&2; exit 1; }
 
-cleanup() { rm -f "$TMP"; }
+cleanup() { rm -f "$TMP"; rm -rf "$PKG_DIR"; }
 trap cleanup EXIT INT TERM
 
 # ---------------------------------------------------------------- checks
@@ -67,7 +68,15 @@ if ! fetch "$URL" || [ ! -s "$TMP" ]; then
 	[ -n "$URL" ] || die "no release asset found for ${REPO}"
 	fetch "$URL" || die "download failed: $URL"
 	[ -s "$TMP" ] || die "downloaded file is empty"
+	IPK="$(basename "$URL")"
 fi
+
+# keep the real file name, dpkg shows it in its output
+PKG_DIR="/tmp/abertisautoswitcher-pkg.$$"
+mkdir -p "$PKG_DIR"
+PKG_FILE="${PKG_DIR}/${IPK}"
+mv "$TMP" "$PKG_FILE"
+TMP="$PKG_FILE"
 
 # --------------------------------------------------------------- backup
 mkdir -p "$BACKUP_DIR"
@@ -83,7 +92,6 @@ say "backups kept in $BACKUP_DIR"
 # -------------------------------------------------------------- install
 say "installing $(basename "$TMP")"
 dpkg -i "$TMP" || die "dpkg failed, see the output above"
-
 # the plugin used to be shipped as "AbetrisAuto": make sure only one copy
 # of the plugin stays on the system
 rm -rf /usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto 2>/dev/null || true
