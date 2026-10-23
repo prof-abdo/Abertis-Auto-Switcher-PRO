@@ -327,9 +327,12 @@ def ensure_astra_conf():
         try:
             with open(ASTRA_CONF, "r") as f:
                 text = f.read()
+            # A foreign template (the astra-sm package's default config) is
+            # detected first: it mixes native input{}/output{} blocks with
+            # the Abertis make_channel blocks and crashes astra 0.2.88.
             if "input {" in text and 'type = "dvb"' in text:
                 logger.log("astra.conf is a foreign template - replacing it")
-            elif "make_channel" in text:
+            elif "make_channel" in text and "http://localhost:8001" in text:
                 logger.log("astra.conf already exists, keeping it")
                 return True
             else:
@@ -913,6 +916,7 @@ def apply_all_feeds(restart=True):
     rules = lamedb_fix.build_a_rules(feeds)
     messages = []
 
+    ensure_astra_conf()
     astra_ok, astra_changed, astra_msg = ensure_astra_streams(feeds=feeds)
     messages.append(astra_msg)
     logger.log(astra_msg)
