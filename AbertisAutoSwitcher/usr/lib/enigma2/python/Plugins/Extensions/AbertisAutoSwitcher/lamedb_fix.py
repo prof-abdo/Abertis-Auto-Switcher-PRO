@@ -480,7 +480,7 @@ def reload_bouquets():
     """
     try:
         import urllib2
-        ua = "AbetrisAuto"
+        ua = "AbertisAutoSwitcher"
         req = urllib2.Request("http://127.0.0.1/web/session",
                               headers={"User-Agent": ua})
         data = urllib2.urlopen(req, timeout=10).read()

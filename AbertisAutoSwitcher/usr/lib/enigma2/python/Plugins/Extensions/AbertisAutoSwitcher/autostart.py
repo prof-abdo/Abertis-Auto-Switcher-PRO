@@ -173,7 +173,7 @@ def _webif_session(force=False):
         return _WEBIF_SID
     try:
         import urllib2
-        ua = "AbetrisAuto"
+        ua = "AbertisAutoSwitcher"
         req = urllib2.Request("http://127.0.0.1/web/session",
                               headers={"User-Agent": ua})
         data = urllib2.urlopen(req, timeout=4).read()
@@ -194,7 +194,7 @@ def _webif_zap(ref):
     global _WEBIF_SID, _WEBIF_SID_TS
     import urllib
     import urllib2
-    ua = "AbetrisAuto"
+    ua = "AbertisAutoSwitcher"
     for force in (False, True):
         sid = _webif_session(force=force)
         query = {"sRef": ref}
@@ -296,7 +296,7 @@ def _fetch_stream(url, limit=1200000, timeout=12):
     partial buffer is usually enough to find it.
     """
     import urllib2
-    req = urllib2.Request(url, headers={"User-Agent": "AbetrisAuto"})
+    req = urllib2.Request(url, headers={"User-Agent": "AbertisAutoSwitcher"})
     resp = urllib2.urlopen(req, timeout=timeout)
     chunks = []
     total = 0
@@ -517,7 +517,7 @@ def _webif_current():
     global _WEBIF_SID, _WEBIF_SID_TS
     try:
         import urllib2
-        ua = "AbetrisAuto"
+        ua = "AbertisAutoSwitcher"
         sid = _webif_session()
         url = "http://127.0.0.1/web/getcurrent"
         if sid:

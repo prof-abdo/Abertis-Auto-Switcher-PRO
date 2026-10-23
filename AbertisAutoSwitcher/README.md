@@ -1,4 +1,4 @@
-# Abertis Auto v1.9.5 - all Abertis feeds on DreamOS 2.6
+# Abertis Auto Switcher PRO v1.9.6 - all Abertis feeds on DreamOS 2.6
 
 Automatic setup and playback for the Abertis / Ciefp `streamrelay` channels
 on Hispasat 30W, written for DreamOS 2.6 (Enigma2 5.0, Python 2.7).
@@ -175,7 +175,7 @@ Astra/Enigma2 on its own.
 ## Install
 
 ```sh
-dpkg -i enigma2-plugin-extensions-abertisauto_1.9.4_all.ipk
+dpkg -i enigma2-plugin-extensions-abertisautoswitcher_1.9.4_all.ipk
 systemctl restart enigma2.service
 ```
 
@@ -216,7 +216,7 @@ DreamOS 2.6 details worth keeping in mind when changing the screen:
 ## Files
 
 ```
-usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/
+usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/
   __init__.py
   plugin.py          UI and autostart registration
   lamedb_fix.py      feed catalog, F1/F5 rules, computed PMT, A-rules,
@@ -238,7 +238,7 @@ DEBIAN/ control postinst prerm
 * Astra log: `/tmp/astra.log`
 * Native playback: `e2vpid`, `e2apid`, `e2pmtpid`, `e2videoheight` from
   `/web/getcurrent` after `Abertis auto OK`
-* The plugin uses the webif user agent `AbetrisAuto` with a `sessionid`;
+* The plugin uses the webif user agent `AbertisAutoSwitcher` with a `sessionid`;
   `/web/zap` and `/web/servicelistreload` are POST requests.
 
 ## Live validation (2026-10-22, DreamOS 2.6)

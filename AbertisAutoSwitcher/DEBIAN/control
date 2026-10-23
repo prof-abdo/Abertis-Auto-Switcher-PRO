@@ -1,7 +1,7 @@
-Package: enigma2-plugin-extensions-abertisauto
+Package: enigma2-plugin-extensions-abertisautoswitcher
 Version: 1.9.6
 Architecture: all
-Maintainer: AbertisAuto <abertisauto@example.com>
+Maintainer: AbertisAuto <abertisautoswitcher@example.com>
 Depends: enigma2
 Section: extras
 Priority: optional

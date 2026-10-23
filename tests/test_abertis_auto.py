@@ -9,12 +9,12 @@ from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PLUGIN_EXTENSIONS = (REPO_ROOT / "AbetrisAuto" / "usr" / "lib" / "enigma2"
+PLUGIN_EXTENSIONS = (REPO_ROOT / "AbertisAutoSwitcher" / "usr" / "lib" / "enigma2"
                      / "python" / "Plugins" / "Extensions")
 if str(PLUGIN_EXTENSIONS) not in sys.path:
     sys.path.insert(0, str(PLUGIN_EXTENSIONS))
 
-from AbetrisAuto import autostart, lamedb_fix, setup
+from AbertisAutoSwitcher import autostart, lamedb_fix, setup
 
 
 ABERTIS_A_RULE = "A: ::0BD2:07EA 2600:000000:1FFF # Abertis PID 2026 F5"
@@ -174,7 +174,7 @@ class OscamRuleInstallerTests(unittest.TestCase):
                 mock.patch.object(setup, "ensure_oscam_dvbapi_a_rules",
                                   return_value=(True, True, "added"), create=True), \
                 mock.patch.object(setup, "restart_oscam") as restart, \
-                mock.patch("AbetrisAuto.lamedb_fix.fix_all",
+                mock.patch("AbertisAutoSwitcher.lamedb_fix.fix_all",
                            return_value=(0, [])):
             setup.run_full_setup()
 
@@ -187,7 +187,7 @@ class OscamRuleInstallerTests(unittest.TestCase):
                 mock.patch.object(setup, "ensure_oscam_dvbapi_a_rules",
                                   return_value=(True, False, "already present"), create=True), \
                 mock.patch.object(setup, "restart_oscam") as restart, \
-                mock.patch("AbetrisAuto.lamedb_fix.fix_all",
+                mock.patch("AbertisAutoSwitcher.lamedb_fix.fix_all",
                            return_value=(0, [])):
             setup.run_full_setup()
 
@@ -1121,8 +1121,8 @@ class UiSkinTests(unittest.TestCase):
     """The plugin screen must stay valid XML with every button in it."""
 
     def setUp(self):
-        source = (REPO_ROOT / "AbetrisAuto" / "usr" / "lib" / "enigma2"
-                  / "python" / "Plugins" / "Extensions" / "AbetrisAuto"
+        source = (REPO_ROOT / "AbertisAutoSwitcher" / "usr" / "lib" / "enigma2"
+                  / "python" / "Plugins" / "Extensions" / "AbertisAutoSwitcher"
                   / "plugin.py")
         self.source = source.read_text(encoding="utf-8")
         match = re.search(r'skin = """(.*?)"""', self.source, re.S)
@@ -1145,10 +1145,12 @@ class UiSkinTests(unittest.TestCase):
 
     def test_every_button_has_a_visible_label(self):
         # Widget text is set programmatically in __init__ labels dict.
-        labels = ["Abertis Auto", "Hispasat 30W  /  Automatic channel playback",
-                  "Checking automation...", "Choose your channel from the bouquet.\\nAbertis Auto handles playback automatically.",
+        labels = ["ABERTIS AUTO SWITCHER PRO",
+                  "Professional Abertis / Ciefp Stream Engine  |  DreamOS 2.6",
+                  "System Ready — Automation Active",
+                  "Select any Abertis feed from the bouquet.",
                   "Exit", "Check update", "Refresh status", "Diagnostics", "OK  About",
-                  "Kingcs / Prof-abdo\\nSpecial thanks: mouadhada & Saber Hisham SH"]
+                  "Kingcs / Prof-abdo"]
         for label in labels:
             self.assertIn(label, self.source)
 
@@ -1189,7 +1191,7 @@ class UiSkinTests(unittest.TestCase):
     def test_native_skin_ready_event_is_logged_after_layout(self):
         self.assertIn("self.onLayoutFinish.append(self._on_skin_ready)",
                       self.source)
-        self.assertIn("Abertis Auto UI layout ready", self.source)
+        self.assertIn("Abertis Auto Switcher PRO UI layout ready", self.source)
 
     def test_every_label_text_is_encoded_for_widget(self):
         # Label() only takes a byte string: a unicode text kills the

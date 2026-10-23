@@ -19,7 +19,7 @@ from . import logger, setup, lamedb_fix, autostart
 
 LAMEDB = "/etc/enigma2/lamedb"
 BACKUP_DIR = "/root/abetris-backup"
-PKG = "enigma2-plugin-extensions-abertisauto"
+PKG = "enigma2-plugin-extensions-abertisautoswitcher"
 VERSION = "1.9.6"
 AUTHOR = "Kingcs / Prof-abdo"
 THANKS = "mouadhada (AbetrisFlagSwitch) and Saber Hisham SH"
@@ -71,16 +71,16 @@ def _local_packages():
     for name in names:
         if not name.endswith(".ipk"):
             continue
-        match = (re.search(r"abertisauto_([0-9][0-9._]*)_all\.ipk$", name)
+        match = (re.search(r"abertisautoswitcher_([0-9][0-9._]*)_all\.ipk$", name)
                  or re.search(r"abetris_([0-9][0-9._]*)\.ipk$", name))
         if match:
             found.append((match.group(1), name))
     return sorted(found, key=lambda item: _version_tuple(item[0]))
 
 
-class AbetrisAutoScreen(Screen):
+class AbertisAutoSwitcherScreen(Screen):
     skin = """
-    <screen name="AbetrisAutoScreen" position="center,center" size="960,580" title="Abertis Auto Switcher PRO" backgroundColor="#00141e2b">
+    <screen name="AbertisAutoSwitcherScreen" position="center,center" size="960,580" title="Abertis Auto Switcher PRO" backgroundColor="#00141e2b">
         <widget name="brand" position="40,30" size="880,55" font="Regular;38" foregroundColor="#00ffffff" backgroundColor="#00141e2b"/>
         <widget name="tagline" position="40,90" size="880,32" font="Regular;22" foregroundColor="#009bb7d0" backgroundColor="#00141e2b"/>
         <widget name="status" position="40,155" size="880,58" font="Regular;28" foregroundColor="#0096e6c5" backgroundColor="#001c3040" valign="center"/>
@@ -259,7 +259,7 @@ class AbetrisAutoScreen(Screen):
 
 
 def main(session, **kwargs):
-    session.open(AbetrisAutoScreen)
+    session.open(AbertisAutoSwitcherScreen)
 
 
 def sessionstart(session=None, **kwargs):

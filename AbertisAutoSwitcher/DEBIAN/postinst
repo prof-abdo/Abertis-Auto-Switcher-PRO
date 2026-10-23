@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
-PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto"
+PLUGIN_DIR="/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher"
 
 chmod 755 "$PLUGIN_DIR" 2>/dev/null || true
 chmod 644 "$PLUGIN_DIR"/*.py 2>/dev/null || true
@@ -8,6 +8,10 @@ chmod 755 "$PLUGIN_DIR/prestart_fix.py" 2>/dev/null || true
 
 # Never let DreamOS load a stale byte-code file after an upgrade.
 rm -f "$PLUGIN_DIR"/*.pyo "$PLUGIN_DIR"/*.pyc 2>/dev/null || true
+
+# The plugin used to be shipped as "AbetrisAuto".  Remove that directory so
+# that only one copy of the plugin is loaded after the rename.
+rm -rf /usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto 2>/dev/null || true
 
 # Never overwrite the working /etc/astra/scripts/abertis.  astra.conf is only
 # extended with missing Abertis streams (one backup, existing blocks kept);
@@ -19,7 +23,7 @@ rm -f "$PLUGIN_DIR"/*.pyo "$PLUGIN_DIR"/*.pyc 2>/dev/null || true
 mkdir -p /etc/systemd/system/enigma2.service.d 2>/dev/null || true
 if ! cat > /etc/systemd/system/enigma2.service.d/abertis-lamedb.conf 2>/dev/null <<'EOF'
 [Service]
-ExecStartPre=-/usr/bin/python /usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/prestart_fix.py
+ExecStartPre=-/usr/bin/python /usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/prestart_fix.py
 EOF
 then
   echo "Abertis Auto: could not write the systemd drop-in (continuing)" >&2
@@ -142,7 +146,7 @@ fi
 /usr/bin/python -c "
 import sys
 sys.path.insert(0, '/usr/lib/enigma2/python/Plugins/Extensions')
-from AbetrisAuto import setup
+from AbertisAutoSwitcher import setup
 ok, messages = setup.apply_all_feeds(restart=True)
 for msg in messages:
     print(msg)

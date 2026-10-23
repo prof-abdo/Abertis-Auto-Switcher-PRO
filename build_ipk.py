@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Build enigma2-plugin-extensions-abertisauto_1.9.6_all.ipk.
+"""Build enigma2-plugin-extensions-abertisautoswitcher_1.9.6_all.ipk.
 
 Only the plugin python files are packaged.  /etc/astra/astra.conf,
 /etc/astra/scripts/abertis and /etc/tuxbox/config/softcam.key are deliberately
@@ -12,11 +12,11 @@ import tarfile
 import time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-PKG = os.path.join(ROOT, "AbetrisAuto")
-PLUGIN_REL = "usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto"
+PKG = os.path.join(ROOT, "AbertisAutoSwitcher")
+PLUGIN_REL = "usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher"
 PLUGIN_DIR = os.path.join(PKG, PLUGIN_REL)
 DEBIAN = os.path.join(PKG, "DEBIAN")
-OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisauto_1.9.6_all.ipk")
+OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisautoswitcher_1.9.6_all.ipk")
 
 
 def _tar_gz(entries, dirs=()):
@@ -95,7 +95,7 @@ def main():
     ]
     control_tar = _tar_gz(control_entries)
     # Include the plugin directory itself in the data tar so a clean DreamOS
-    # image (no AbetrisAuto directory yet) can install it: dpkg cannot create
+    # image (no AbertisAutoSwitcher directory yet) can install it: dpkg cannot create
     # a missing leaf directory on its own ("...dpkg-new: No such file or
     # directory").  The parent directories exist on every Enigma2 image.
     plugin_dirs = [PLUGIN_REL + "/"]
