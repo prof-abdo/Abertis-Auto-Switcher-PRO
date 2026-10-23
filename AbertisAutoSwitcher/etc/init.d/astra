@@ -16,27 +16,12 @@ CONF=/etc/astra/astra.conf
 PIDFILE=/var/run/astra.pid
 LOGFILE=/tmp/astra.log
 
-# astra-sm 0.2.88 uses the Lua parser, which does not accept '#' comments,
-# while the DreamOS configuration files use them.  Build a clean copy of the
-# config (with '#' comments stripped) and feed that to astra.  The original
-# file is never modified.
-clean_config() {
-    if [ ! -f "$CONF" ]; then
-        echo "astra.conf missing"
-        exit 1
-    fi
-    CONF_CLEAN="/tmp/astra.conf.clean"
-    sed 's/[[:space:]]*#.*$//' "$CONF" > "$CONF_CLEAN"
-    CONF="$CONF_CLEAN"
-}
-
 is_running() {
 	pidof astra >/dev/null 2>&1
 }
 
 case "$1" in
 	start)
-		clean_config
 		if is_running; then
 			echo "astra already running"
 			exit 0
