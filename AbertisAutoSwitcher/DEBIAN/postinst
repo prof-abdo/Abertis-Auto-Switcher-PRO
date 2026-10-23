@@ -177,5 +177,5 @@ for msg in messages:
     print(msg)
 " >>/tmp/abetris_postinst.log 2>&1 || true
 
-echo "Abertis Auto Switcher PRO 1.9.9 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
+echo "Abertis Auto Switcher PRO 1.9.10 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
 exit 0
