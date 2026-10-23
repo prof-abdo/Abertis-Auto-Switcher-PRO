@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Build enigma2-plugin-extensions-abertisautoswitcher_1.9.7_all.ipk.
+"""Build enigma2-plugin-extensions-abertisautoswitcher_1.9.8_all.ipk.
 
 Only the plugin python files are packaged.  /etc/astra/astra.conf,
 /etc/astra/scripts/abertis and /etc/tuxbox/config/softcam.key are deliberately
@@ -16,7 +16,7 @@ PKG = os.path.join(ROOT, "AbertisAutoSwitcher")
 PLUGIN_REL = "usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher"
 PLUGIN_DIR = os.path.join(PKG, PLUGIN_REL)
 DEBIAN = os.path.join(PKG, "DEBIAN")
-OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisautoswitcher_1.9.7_all.ipk")
+OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisautoswitcher_1.9.8_all.ipk")
 
 
 def _tar_gz(entries, dirs=()):
@@ -81,10 +81,21 @@ def main():
     native = os.path.join(PLUGIN_DIR, "abertis.aarch64")
     if os.path.exists(native):
         data_entries.append((PLUGIN_REL + "/abertis.aarch64", native, 0o755))
-    # Nothing outside the plugin directory may ever be packaged: the user's
-    # astra.conf, SoftCam.Key and OSCam files stay untouched by dpkg itself.
+    # the astra-sm binaries: astra itself, the T2-MI de-encapsulator and the
+    # test tool.  The plugin deploys them into /usr/bin (with a backup of the
+    # file it replaces), so they are shipped inside the plugin directory.
+    for tool in ("astra", "t2mi_decap", "spammer"):
+        path = os.path.join(PLUGIN_DIR, tool)
+        if os.path.exists(path):
+            data_entries.append((PLUGIN_REL + "/" + tool, path, 0o755))
+    # The init script of astra.  Nothing else owns /etc/init.d/astra, so dpkg
+    # can install it directly; the working astra.conf, SoftCam.Key and the
+    # OSCam files stay untouched by dpkg itself.
+    init_script = os.path.join(ROOT, "AbertisAutoSwitcher", "etc", "init.d", "astra")
+    if os.path.exists(init_script):
+        data_entries.append(("etc/init.d/astra", init_script, 0o755))
     for name, _path, _mode in data_entries:
-        assert name.startswith(PLUGIN_REL + "/"), name
+        assert name.startswith(PLUGIN_REL + "/") or name == "etc/init.d/astra", name
     version = _control_version()
     assert version in OUT, "output file %s does not match control version %s" % (
         os.path.basename(OUT), version)

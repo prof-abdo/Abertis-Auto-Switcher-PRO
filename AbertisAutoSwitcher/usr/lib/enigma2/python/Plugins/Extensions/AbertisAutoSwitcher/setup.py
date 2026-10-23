@@ -934,6 +934,63 @@ def apply_all_feeds(restart=True):
     return bool(astra_ok and oscam_ok), messages
 
 
+# The astra-sm binaries that the package ships.  They are installed into
+# /usr/bin by ensure_astra_tools(); a file that is replaced is backed up
+# once as <file>.orig and the working astra.conf is never touched.
+ASTRA_TOOLS = (
+    ("astra", "/usr/bin/astra"),
+    ("t2mi_decap", "/usr/bin/t2mi_decap"),
+    ("spammer", "/usr/bin/spammer"),
+)
+
+
+def _same_file(left, right):
+    try:
+        if os.path.getsize(left) != os.path.getsize(right):
+            return False
+        import filecmp
+        return filecmp.cmp(left, right, shallow=False)
+    except Exception:
+        return False
+
+
+def ensure_astra_tools():
+    """Install the astra-sm binaries that the package ships.
+
+    Returns (changed, messages).  The call is idempotent: a file that is
+    already the shipped one is left alone, and a file that is replaced is
+    backed up once.  Replacing a running binary is done with a rename, so
+    the running process keeps working until it is restarted.
+    """
+    import shutil
+    messages = []
+    changed = False
+    here = os.path.dirname(os.path.abspath(__file__))
+    for name, target in ASTRA_TOOLS:
+        src = os.path.join(here, name)
+        if not os.path.isfile(src):
+            messages.append("%s: not shipped, skipped" % target)
+            continue
+        try:
+            if os.path.exists(target) and _same_file(src, target):
+                messages.append("%s: already installed" % target)
+                continue
+            if os.path.exists(target):
+                backup = target + ".orig"
+                if not os.path.exists(backup):
+                    shutil.copy2(target, backup)
+                    messages.append("%s: previous version kept as %s" % (target, backup))
+            tmp = target + ".new"
+            shutil.copy2(src, tmp)
+            os.chmod(tmp, 0o755)
+            os.rename(tmp, target)
+            changed = True
+            messages.append("%s: installed" % target)
+        except Exception as e:
+            messages.append("%s: %s" % (target, e))
+    return changed, messages
+
+
 def run_full_setup(restart_configs=True):
     """Prepare all Abertis feeds and fix the three validated lamedb entries.
 
@@ -943,6 +1000,9 @@ def run_full_setup(restart_configs=True):
     explicit "Run setup" action can apply a controlled restart.
     """
     logger.log("=== Abertis Auto full setup start ===")
+    tools_changed, tool_messages = ensure_astra_tools()
+    for msg in tool_messages:
+        logger.log(msg)
     ensure_abertis_script()
     ensure_softcam_key()
     key_ok, key_changed = ensure_softcam_key_upper()
@@ -977,6 +1037,14 @@ def run_full_setup(restart_configs=True):
                 logger.log(msg)
             else:
                 logger.log("astra.conf updated - a controlled astra restart is required")
+        elif tools_changed:
+            # the astra binary itself was replaced: it only takes effect
+            # with a restart
+            if restart_configs:
+                ok, msg = controlled_astra_restart()
+                logger.log(msg)
+            else:
+                logger.log("astra binary updated - a controlled astra restart is required")
         restart_astra()
     # Keep the OSCam binary and every existing config directive untouched apart
     # from the backed-up A-rules above.

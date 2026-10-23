@@ -1,4 +1,4 @@
-# Abertis Auto Switcher PRO v1.9.7 - all Abertis feeds on DreamOS 2.6
+# Abertis Auto Switcher PRO 1.9.8 - all Abertis feeds on DreamOS 2.6
 
 Automatic setup and playback for the Abertis / Ciefp `streamrelay` channels
 on Hispasat 30W, written for DreamOS 2.6 (Enigma2 5.0, Python 2.7).

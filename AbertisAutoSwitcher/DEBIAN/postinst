@@ -147,10 +147,13 @@ fi
 import sys
 sys.path.insert(0, '/usr/lib/enigma2/python/Plugins/Extensions')
 from AbertisAutoSwitcher import setup
+changed, messages = setup.ensure_astra_tools()
+for msg in messages:
+    print(msg)
 ok, messages = setup.apply_all_feeds(restart=True)
 for msg in messages:
     print(msg)
 " >>/tmp/abetris_postinst.log 2>&1 || true
 
-echo "Abertis Auto Switcher PRO 1.9.7 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
+echo "Abertis Auto Switcher PRO 1.9.8 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
 exit 0
