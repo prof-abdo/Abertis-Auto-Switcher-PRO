@@ -1,0 +1,8 @@
+Package: enigma2-plugin-extensions-abetrisflagswitch
+Version: 0.1
+Architecture: all
+Maintainer: YourName <youremail@example.com>
+Depends: enigma2
+Section: extras
+Priority: optional
+Description: ABERTIS Flag Switch v0.a1 alpha - Change F1/F5 for ABERTIS channels

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Build enigma2-plugin-extensions-abertisautoswitcher_1.9.10_all.ipk.
+"""Build enigma2-plugin-extensions-abertisautoswitcher_1.9.11_all.ipk.
 
 Only the plugin python files are packaged.  /etc/astra/astra.conf,
 /etc/astra/scripts/abertis and /etc/tuxbox/config/softcam.key are deliberately
@@ -16,7 +16,7 @@ PKG = os.path.join(ROOT, "AbertisAutoSwitcher")
 PLUGIN_REL = "usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher"
 PLUGIN_DIR = os.path.join(PKG, PLUGIN_REL)
 DEBIAN = os.path.join(PKG, "DEBIAN")
-OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisautoswitcher_1.9.10_all.ipk")
+OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisautoswitcher_1.9.11_all.ipk")
 
 
 def _tar_gz(entries, dirs=()):
