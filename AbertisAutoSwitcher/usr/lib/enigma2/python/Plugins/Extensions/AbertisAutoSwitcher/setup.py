@@ -104,12 +104,12 @@ F 50DEB036 00000000 FE6566C9EB28697C
 """
 
 DEFAULT_ASTRA_CONF = """# Abertis Auto - astra-sm configuration template
-# Adjust the input transponder and output UDP port to your setup.
-# Hispasat 30.0W Abertis example (T2-MI PLP). Update frequency/symbol rate as needed.
+-- Adjust the input transponder and output UDP port to your setup.
+-- Hispasat 30.0W Abertis example (T2-MI PLP). Update frequency/symbol rate as needed.
 log file /tmp/astra.log
 log debug
 
-# Input: satellite transponder
+-- Input: satellite transponder
 input {
   type = "dvb"
   adapter = 0
@@ -123,7 +123,7 @@ input {
   plp = 0
 }
 
-# Output: local UDP stream consumed by the lamedb stream-relay service
+-- Output: local UDP stream consumed by the lamedb stream-relay service
 output {
   type = "udp"
   address = "127.0.0.1"

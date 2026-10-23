@@ -68,12 +68,20 @@ CONF=/etc/astra/astra.conf
 PIDFILE=/var/run/astra.pid
 LOGFILE=/tmp/astra.log
 
+clean_config() {
+    [ -f "$CONF" ] || { echo "astra.conf missing"; exit 1; }
+    CONF_CLEAN="/tmp/astra.conf.clean"
+    sed 's/[[:space:]]*#.*$//' "$CONF" > "$CONF_CLEAN"
+    CONF="$CONF_CLEAN"
+}
+
 is_running() {
     pidof astra >/dev/null 2>&1
 }
 
 case "$1" in
     start)
+        clean_config
         if is_running; then
             echo "astra-sm already running"
             exit 0
@@ -177,5 +185,5 @@ for msg in messages:
     print(msg)
 " >>/tmp/abetris_postinst.log 2>&1 || true
 
-echo "Abertis Auto Switcher PRO 1.9.10 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
+echo "Abertis Auto Switcher PRO 1.9.11 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
 exit 0
