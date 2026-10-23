@@ -991,6 +991,51 @@ def ensure_astra_tools():
     return changed, messages
 
 
+# Runtime libraries that the shipped astra-sm binaries need on a clean
+# DreamOS image (the image ships OpenSSL 1.0 and no libdvbcsa at all).
+RUNTIME_LIBS = (
+    ("libdvbcsa.so.1", "/usr/lib/libdvbcsa.so.1"),
+    ("libcrypto.so.3", "/usr/lib/libcrypto.so.3"),
+)
+
+
+def ensure_runtime_libs():
+    """Install the runtime libraries shipped by the package.
+
+    A file that is missing is created, a file that differs is backed up
+    once and replaced.  The call is idempotent.  Returns (changed, messages).
+    """
+    import shutil
+    messages = []
+    changed = False
+    here = os.path.dirname(os.path.abspath(__file__))
+    for name, target in RUNTIME_LIBS:
+        src = os.path.join(here, name)
+        if not os.path.isfile(src):
+            messages.append("%s: not shipped, skipped" % target)
+            continue
+        try:
+            if os.path.exists(target):
+                if os.path.getsize(src) == os.path.getsize(target):
+                    with open(src, "rb") as f1, open(target, "rb") as f2:
+                        if f1.read() == f2.read():
+                            messages.append("%s: already installed" % target)
+                            continue
+                backup = target + ".orig"
+                if not os.path.exists(backup):
+                    shutil.copy2(target, backup)
+                    messages.append("%s: previous version kept as %s" % (target, backup))
+            tmp = target + ".new"
+            shutil.copy2(src, tmp)
+            os.chmod(tmp, 0o755)
+            os.rename(tmp, target)
+            changed = True
+            messages.append("%s: installed" % target)
+        except Exception as e:
+            messages.append("%s: %s" % (target, e))
+    return changed, messages
+
+
 def run_full_setup(restart_configs=True):
     """Prepare all Abertis feeds and fix the three validated lamedb entries.
 
@@ -1000,6 +1045,9 @@ def run_full_setup(restart_configs=True):
     explicit "Run setup" action can apply a controlled restart.
     """
     logger.log("=== Abertis Auto full setup start ===")
+    libs_changed, lib_messages = ensure_runtime_libs()
+    for msg in lib_messages:
+        logger.log(msg)
     tools_changed, tool_messages = ensure_astra_tools()
     for msg in tool_messages:
         logger.log(msg)
@@ -1037,14 +1085,14 @@ def run_full_setup(restart_configs=True):
                 logger.log(msg)
             else:
                 logger.log("astra.conf updated - a controlled astra restart is required")
-        elif tools_changed:
-            # the astra binary itself was replaced: it only takes effect
-            # with a restart
+        if tools_changed or libs_changed:
+            # the astra binary or one of its libraries was replaced: it
+            # only takes effect with a restart
             if restart_configs:
                 ok, msg = controlled_astra_restart()
                 logger.log(msg)
             else:
-                logger.log("astra binary updated - a controlled astra restart is required")
+                logger.log("astra binary or its libraries updated - a controlled astra restart is required")
         restart_astra()
     # Keep the OSCam binary and every existing config directive untouched apart
     # from the backed-up A-rules above.

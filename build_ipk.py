@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Build enigma2-plugin-extensions-abertisautoswitcher_1.9.8_all.ipk.
+"""Build enigma2-plugin-extensions-abertisautoswitcher_1.9.9_all.ipk.
 
 Only the plugin python files are packaged.  /etc/astra/astra.conf,
 /etc/astra/scripts/abertis and /etc/tuxbox/config/softcam.key are deliberately
@@ -16,7 +16,7 @@ PKG = os.path.join(ROOT, "AbertisAutoSwitcher")
 PLUGIN_REL = "usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher"
 PLUGIN_DIR = os.path.join(PKG, PLUGIN_REL)
 DEBIAN = os.path.join(PKG, "DEBIAN")
-OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisautoswitcher_1.9.8_all.ipk")
+OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisautoswitcher_1.9.9_all.ipk")
 
 
 def _tar_gz(entries, dirs=()):
@@ -88,6 +88,12 @@ def main():
         path = os.path.join(PLUGIN_DIR, tool)
         if os.path.exists(path):
             data_entries.append((PLUGIN_REL + "/" + tool, path, 0o755))
+    # runtime libraries that a fresh DreamOS image does not ship but that the
+    # astra-sm binaries need.  They are deployed into /usr/lib by the plugin.
+    for lib in ("libdvbcsa.so.1", "libcrypto.so.3"):
+        path = os.path.join(PLUGIN_DIR, lib)
+        if os.path.exists(path):
+            data_entries.append((PLUGIN_REL + "/" + lib, path, 0o644))
     # The init script of astra.  Nothing else owns /etc/init.d/astra, so dpkg
     # can install it directly; the working astra.conf, SoftCam.Key and the
     # OSCam files stay untouched by dpkg itself.

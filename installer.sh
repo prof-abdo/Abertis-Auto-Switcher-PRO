@@ -16,7 +16,7 @@
 set -e
 
 REPO="prof-abdo/Abertis-Auto-Switcher-PRO"
-RELEASE="v1.9.8"
+RELEASE="v1.9.9"
 PKG="enigma2-plugin-extensions-abertisautoswitcher"
 BACKUP_DIR="/root/abetris-backup"
 TMP="/tmp/abertisautoswitcher-install.$$"

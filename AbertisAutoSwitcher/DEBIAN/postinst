@@ -13,6 +13,25 @@ rm -f "$PLUGIN_DIR"/*.pyo "$PLUGIN_DIR"/*.pyc 2>/dev/null || true
 # that only one copy of the plugin is loaded after the rename.
 rm -rf /usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto 2>/dev/null || true
 
+# Runtime libraries that the shipped astra-sm binaries need but that a clean
+# DreamOS image does not provide.  Back up an existing file once and never
+# overwrite a newer one.
+for lib in libdvbcsa.so.1 libcrypto.so.3; do
+    src="$PLUGIN_DIR/$lib"
+    dst="/usr/lib/$lib"
+    [ -f "$src" ] || continue
+    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+        continue
+    fi
+    if [ -f "$dst" ] && [ ! -e "$dst.orig" ]; then
+        cp -a "$dst" "$dst.orig" 2>/dev/null || true
+    fi
+    cp -f "$src" "$dst.new" 2>/dev/null || continue
+    chmod 644 "$dst.new" 2>/dev/null || true
+    mv -f "$dst.new" "$dst" 2>/dev/null || true
+    echo "installed runtime library: $dst" >>/tmp/abetris_postinst.log
+done
+
 # Never overwrite the working /etc/astra/scripts/abertis.  astra.conf is only
 # extended with missing Abertis streams (one backup, existing blocks kept);
 # softcam.key is only merged with the Abertis BISS keys (left untouched when
@@ -147,6 +166,9 @@ fi
 import sys
 sys.path.insert(0, '/usr/lib/enigma2/python/Plugins/Extensions')
 from AbertisAutoSwitcher import setup
+changed, messages = setup.ensure_runtime_libs()
+for msg in messages:
+    print(msg)
 changed, messages = setup.ensure_astra_tools()
 for msg in messages:
     print(msg)
@@ -155,5 +177,5 @@ for msg in messages:
     print(msg)
 " >>/tmp/abetris_postinst.log 2>&1 || true
 
-echo "Abertis Auto Switcher PRO 1.9.8 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
+echo "Abertis Auto Switcher PRO 1.9.9 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
 exit 0
