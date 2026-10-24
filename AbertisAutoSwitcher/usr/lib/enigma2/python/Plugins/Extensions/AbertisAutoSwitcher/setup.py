@@ -109,6 +109,8 @@ DEFAULT_ASTRA_CONF = """# Abertis Auto - astra-sm configuration template
 # rejected by the Lua parser and were removed.  The Abertis feeds are
 # appended below by the plugin.
 
+log.set({ stdout = false, debug = false, syslog = "astra", })
+
 """
 
 

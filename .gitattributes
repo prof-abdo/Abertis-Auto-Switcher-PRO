@@ -1,0 +1,21 @@
+# The receiver is a Linux box: the shell installer, the init script, the
+# astra config and the softcam key files must keep Unix line endings even
+# though most development happens on a Windows checkout (core.autocrlf).
+* text=auto
+
+*.sh text eol=lf
+*.py text eol=lf
+*.conf text eol=lf
+*.c text eol=lf
+*.key text eol=lf
+*.dist text eol=lf
+
+AbertisAutoSwitcher/etc/init.d/** text eol=lf
+AbertisAutoSwitcher/etc/astra/scripts/** text eol=lf
+AbertisAutoSwitcher/etc/tuxbox/config/** text eol=lf
+
+# binaries shipped inside the package
+AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/astra binary
+AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/t2mi_decap binary
+AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/spammer binary
+AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/abertis.aarch64 binary

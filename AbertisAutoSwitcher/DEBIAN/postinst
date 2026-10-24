@@ -18,6 +18,21 @@ rm -rf /usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto 2>/dev/null || tru
 # softcam.key is only merged with the Abertis BISS keys (left untouched when
 # it cannot be read).
 
+# Ship the known-good Abertis key files (Levi45 + MOHAMED_OS, incl. the
+# ABERTIS BISS keys) so a fresh DreamOS image descrambles from day one.
+# dpkg only owns the *.dist copies: the live key files are created here and
+# only when they do not exist yet, so a receiver's working keys are never
+# overwritten (the plugin merges the Abertis keys into both spellings later).
+mkdir -p /etc/tuxbox/config 2>/dev/null || true
+if [ ! -e /etc/tuxbox/config/softcam.key ] && [ -f /etc/tuxbox/config/softcam.key.dist ]; then
+    cp /etc/tuxbox/config/softcam.key.dist /etc/tuxbox/config/softcam.key
+    chmod 644 /etc/tuxbox/config/softcam.key 2>/dev/null || true
+fi
+if [ ! -e /etc/tuxbox/config/SoftCam.Key ] && [ -f /etc/tuxbox/config/SoftCam.Key.dist ]; then
+    cp /etc/tuxbox/config/SoftCam.Key.dist /etc/tuxbox/config/SoftCam.Key
+    chmod 644 /etc/tuxbox/config/SoftCam.Key 2>/dev/null || true
+fi
+
 # Fix lamedb on disk before enigma2 starts (enigma2 saves its in-memory DB at
 # shutdown, so a post-start fix alone is too late).
 mkdir -p /etc/systemd/system/enigma2.service.d 2>/dev/null || true
@@ -155,6 +170,30 @@ for msg in messages:
     print(msg)
 " >>/tmp/abetris_postinst.log 2>&1 || true
 
+# Network tuning for Abertis - prevents the picture from cutting (ta9ti3).
+# Huge UDP socket buffers (16 MB vs default ~200 KB) prevent packet loss
+# when the high-bitrate Abertis feeds stream through streamproxy -> astra.
+# Taken from the Ciefp reference project's sysctl.conf.
+if [ -d /etc/sysctl.d ]; then
+    cat > /etc/sysctl.d/99-abertis.conf <<'SYSCTL_EOF'
+## added for Abertis ###
+net.core.rmem_default = 16777216
+net.core.rmem_max = 16777216
+net.core.wmem_default = 16777216
+net.core.wmem_max = 16777216
+net.ipv4.udp_mem = 8388608 12582912 16777216
+net.ipv4.tcp_rmem = 4096 87380 8388608
+net.ipv4.tcp_wmem = 4096 65536 8388608
+net.ipv4.tcp_tw_recycle = 0
+vm.dirty_writeback_centisecs = 300
+vm.dirty_background_ratio = 1
+vm.min_free_kbytes = 8192
+vm.dirty_ratio = 60
+vm.swappiness = 30
+SYSCTL_EOF
+    sysctl -p /etc/sysctl.d/99-abertis.conf >/dev/null 2>&1 || true
+fi
+
 # Make sure the streamrelay socket is active (the plugin reads the feeds
 # through port 8001).
 systemctl enable streamproxy.socket >/dev/null 2>&1 || true
@@ -166,5 +205,5 @@ if [ -x /usr/bin/OSCam_11964-803 ] && ! pidof OSCam_11964-803 >/dev/null 2>&1; t
     /usr/bin/OSCam_11964-803 -b >/tmp/abetris_oscam.log 2>&1 || true
 fi
 
-echo "Abertis Auto Switcher PRO 1.9.11 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
+echo "Abertis Auto Switcher PRO 1.9.12 installed (all Abertis feeds: A-rules + astra streams). Reboot to activate."
 exit 0

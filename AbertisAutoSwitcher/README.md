@@ -1,4 +1,4 @@
-# Abertis Auto Switcher PRO 1.9.11 - all Abertis feeds on DreamOS 2.6
+# Abertis Auto Switcher PRO 1.9.12 - all Abertis feeds on DreamOS 2.6
 
 Automatic setup and playback for the Abertis / Ciefp `streamrelay` channels
 on Hispasat 30W, written for DreamOS 2.6 (Enigma2 5.0, Python 2.7).
@@ -17,6 +17,11 @@ is present in the lamedb:
 * appends only the missing OSCam-EMU `A:` rules to
   `/etc/tuxbox/config/oscam.dvbapi`;
 * keeps a native aarch64 `/etc/astra/scripts/abertis` de-encapsulator;
+* ships the known-good Abertis key files (Levi45 + MOHAMED_OS, with the
+  `ABERTIS` BISS entries) as `/etc/tuxbox/config/*.dist` and installs them
+  under their real names `softcam.key` / `SoftCam.Key` **only when no key
+  file exists yet** - a fresh image descrambles out of the box, an existing
+  receiver's keys are never overwritten;
 * restarts OSCam only when a new A-rule was actually written, and only when
   exactly one active OSCam unit exists;
 * never overwrites `SoftCam.Key`, the Ciefp bouquets, or an existing Astra

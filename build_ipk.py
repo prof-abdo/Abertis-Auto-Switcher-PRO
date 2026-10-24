@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Build enigma2-plugin-extensions-abertisautoswitcher_1.9.11_all.ipk.
+"""Build enigma2-plugin-extensions-abertisautoswitcher_1.9.12_all.ipk.
 
-Only the plugin python files are packaged.  /etc/astra/astra.conf,
-/etc/astra/scripts/abertis and /etc/tuxbox/config/softcam.key are deliberately
-excluded: they are the user's known-good working files.  The postinst only
-appends missing Abertis streams/A-rules after backing them up.
+Only the plugin python files are packaged.  /etc/astra/astra.conf and
+/etc/astra/scripts/abertis are deliberately excluded: they are the user's
+known-good working files.  The postinst only appends missing Abertis
+streams/A-rules after backing them up.
+
+The Abertis BISS key files are shipped as /etc/tuxbox/config/*.dist copies;
+the postinst installs them under their real names only when no key file
+exists yet, so a receiver's working keys are never overwritten.
 """
 import io
 import os
@@ -16,7 +20,7 @@ PKG = os.path.join(ROOT, "AbertisAutoSwitcher")
 PLUGIN_REL = "usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher"
 PLUGIN_DIR = os.path.join(PKG, PLUGIN_REL)
 DEBIAN = os.path.join(PKG, "DEBIAN")
-OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisautoswitcher_1.9.11_all.ipk")
+OUT = os.path.join(ROOT, "enigma2-plugin-extensions-abertisautoswitcher_1.9.12_all.ipk")
 
 
 def _tar_gz(entries, dirs=()):
@@ -94,8 +98,24 @@ def main():
     init_script = os.path.join(ROOT, "AbertisAutoSwitcher", "etc", "init.d", "astra")
     if os.path.exists(init_script):
         data_entries.append(("etc/init.d/astra", init_script, 0o755))
+    # The Abertis BISS key files (astra reads the lowercase softcam.key,
+    # oscam-emu the uppercase SoftCam.Key).  They are shipped as *.dist so
+    # dpkg never overwrites a receiver's working keys: the postinst copies
+    # them into place only when the real file does not exist yet.  The repo
+    # keeps the uppercase copy under "SoftCam.Key.dist" because a Windows
+    # checkout cannot hold two file names that differ only in case.
+    key_entries = (
+        ("etc/tuxbox/config/softcam.key.dist",
+         os.path.join(PKG, "etc", "tuxbox", "config", "softcam.key")),
+        ("etc/tuxbox/config/SoftCam.Key.dist",
+         os.path.join(PKG, "etc", "tuxbox", "config", "SoftCam.Key.dist")),
+    )
+    for name, path in key_entries:
+        if os.path.exists(path):
+            data_entries.append((name, path, 0o644))
     for name, _path, _mode in data_entries:
-        assert name.startswith(PLUGIN_REL + "/") or name == "etc/init.d/astra", name
+        assert (name.startswith(PLUGIN_REL + "/") or name == "etc/init.d/astra"
+                or name.startswith("etc/tuxbox/config/")), name
     version = _control_version()
     assert version in OUT, "output file %s does not match control version %s" % (
         os.path.basename(OUT), version)
@@ -109,7 +129,7 @@ def main():
     # image (no AbertisAutoSwitcher directory yet) can install it: dpkg cannot create
     # a missing leaf directory on its own ("...dpkg-new: No such file or
     # directory").  The parent directories exist on every Enigma2 image.
-    plugin_dirs = [PLUGIN_REL + "/"]
+    plugin_dirs = [PLUGIN_REL + "/", "etc/tuxbox/config/"]
     data_tar = _tar_gz(data_entries, plugin_dirs)
     out = b"!<arch>\n"
     out += _ar_member("debian-binary", b"2.0\n")
