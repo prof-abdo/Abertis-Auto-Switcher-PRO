@@ -1232,10 +1232,16 @@ def apply_all_feeds(restart=True):
     messages = []
 
     ensure_astra_conf()
+    fixed_comments = sanitize_astra_conf()
+    if fixed_comments:
+        msg = ("astra.conf: converted %d shell-style comment(s) to Lua (--)"
+               % fixed_comments)
+        messages.append(msg)
+        logger.log(msg)
     astra_ok, astra_changed, astra_msg = ensure_astra_streams(feeds=feeds)
     messages.append(astra_msg)
     logger.log(astra_msg)
-    if astra_ok and astra_changed and restart:
+    if astra_ok and (astra_changed or fixed_comments) and restart:
         ok, msg = controlled_astra_restart()
         messages.append(msg)
         logger.log(msg)
@@ -1316,9 +1322,14 @@ def _pm_install_library(lib, messages):
     """Best-effort package-manager install of a missing shared library.
 
     Only used when the library is missing on the image and the package
-    does not ship it: opkg on opkg images, apt-get on dpkg images.  One
-    attempt per boot (marker file in /tmp keeps an offline receiver from
-    retrying a slow lookup over and over).
+    does not ship it: opkg on opkg images, apt-get on dpkg images.  A
+    failed apt-get install is retried once after a package-index
+    update: fresh DreamOS images ship apt with empty package lists, and
+    the manual procedure that is known to work on them is
+    "apt-get update && apt-get install libdvbcsa1" (documented in the
+    support thread).  At most one update and one install attempt per
+    lib per boot: marker files in /tmp keep an offline receiver from
+    retrying a slow lookup over and over.
     """
     names = TOOL_LIB_PACKAGES.get(lib)
     if not names:
@@ -1326,18 +1337,35 @@ def _pm_install_library(lib, messages):
     marker = "/tmp/.abetris_pm_" + lib.replace(".", "_")
     if os.path.exists(marker):
         return False
+    update_marker = "/tmp/.abetris_pm_update"
     log = "/tmp/abetris_lib.log"
     for pkg in names:
+        rc = None
         try:
             if os.path.exists("/usr/bin/opkg"):
-                cmd = ("/usr/bin/opkg", "install", pkg)
+                pm = "opkg"
+                install = ("/usr/bin/opkg", "install", pkg)
             elif os.path.exists("/usr/bin/apt-get"):
-                cmd = ("/usr/bin/apt-get", "install", "-y", pkg)
+                pm = "apt-get"
+                install = ("/usr/bin/apt-get", "install", "-y", pkg)
             else:
                 return False
             with open(log, "ab") as out:
-                rc = subprocess.call(cmd, stdout=out,
+                rc = subprocess.call(install, stdout=out,
                                      stderr=subprocess.STDOUT)
+                if rc != 0 and pm == "apt-get" \
+                        and not os.path.exists(update_marker):
+                    # empty/stale apt package index: replicate the
+                    # documented manual procedure - refresh the index
+                    # once per boot, then retry the install once
+                    subprocess.call(("/usr/bin/apt-get", "update"),
+                                    stdout=out, stderr=subprocess.STDOUT)
+                    try:
+                        open(update_marker, "w").close()
+                    except Exception:
+                        pass
+                    rc = subprocess.call(install, stdout=out,
+                                         stderr=subprocess.STDOUT)
         except Exception as e:
             messages.append("%s: package-manager install failed: %s"
                             % (lib, e))

@@ -1484,6 +1484,60 @@ class ToolSharedLibsTests(unittest.TestCase):
             self.assertFalse(setup._pm_install_library(
                 "libdvbcsa.so.1", messages))
 
+    def test_pm_install_library_retries_after_one_apt_update(self):
+        """v1.9.17: fresh DreamOS images have empty apt lists.
+
+        Enigma Architect's working manual procedure is
+        "apt-get update && apt-get install libdvbcsa1": the plugin must
+        replicate it when the first install fails.
+        """
+        allowed = set(("/usr/bin/apt-get",))
+
+        def fake_exists(path):
+            return path in allowed
+
+        calls = []
+        with mock.patch.object(setup.os.path, "exists",
+                               side_effect=fake_exists), \
+             mock.patch.object(setup, "open", mock.mock_open()), \
+             mock.patch.object(setup, "_lib_on_image",
+                               return_value=True), \
+             mock.patch.object(setup.subprocess, "call",
+                               side_effect=[1, 0, 0]) as call_mock:
+            messages = []
+            self.assertTrue(setup._pm_install_library(
+                "libdvbcsa.so.1", messages))
+        calls = [c.args[0] for c in call_mock.call_args_list]
+        self.assertEqual(calls, [
+            ("/usr/bin/apt-get", "install", "-y", "libdvbcsa1"),
+            ("/usr/bin/apt-get", "update"),
+            ("/usr/bin/apt-get", "install", "-y", "libdvbcsa1"),
+        ])
+        self.assertIn("installed from the image feed", messages[0])
+
+    def test_pm_install_library_updates_index_at_most_once_per_boot(self):
+        allowed = set(("/usr/bin/apt-get", "/tmp/.abetris_pm_update"))
+
+        def fake_exists(path):
+            return path in allowed
+
+        with mock.patch.object(setup.os.path, "exists",
+                               side_effect=fake_exists), \
+             mock.patch.object(setup, "open", mock.mock_open()), \
+             mock.patch.object(setup, "_lib_on_image",
+                               return_value=False), \
+             mock.patch.object(setup.subprocess, "call",
+                               side_effect=[1, 2]) as call_mock:
+            messages = []
+            self.assertFalse(setup._pm_install_library(
+                "libdvbcsa.so.1", messages))
+        calls = [c.args[0] for c in call_mock.call_args_list]
+        self.assertEqual(calls, [
+            ("/usr/bin/apt-get", "install", "-y", "libdvbcsa1"),
+            ("/usr/bin/apt-get", "install", "-y", "libdvbcsa"),
+        ])
+        self.assertIn("did not provide it", messages[-1])
+
 
 class AstraInitProvisioningTests(unittest.TestCase):
     """v1.9.15: provision /etc/init.d/astra-sm from the plugin itself.
