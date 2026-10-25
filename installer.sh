@@ -76,7 +76,9 @@ NAME=""
 PKG_URL=""
 for EXT in $PKG_EXTS; do
     NAME="${PKG}_${VER}_all.${EXT}"
-    PKG_URL="https://github.com/${REPO}/releases/download/${RELEASE}/${NAME}"
+    # GitHub serves a stale redirect after a same-name asset refresh:
+    # a no-op cache buster guarantees the current asset bytes.
+    PKG_URL="https://github.com/${REPO}/releases/download/${RELEASE}/${NAME}?cb=$(date +%s)"
     say "downloading ${NAME}"
     if fetch "$PKG_URL" && [ -s "$TMP" ]; then
         break
@@ -98,7 +100,8 @@ if [ -z "$NAME" ]; then
     for EXT in $PKG_EXTS; do
         PKG_URL="$(printf '%s\n' "$URLS" | grep "\.${EXT}\$" | head -n 1)"
         if [ -n "$PKG_URL" ]; then
-            fetch "$PKG_URL" && [ -s "$TMP" ] && NAME="$(basename "$PKG_URL")" && break
+            DOWNLOAD_URL="${PKG_URL}?cb=$(date +%s)"
+            fetch "$DOWNLOAD_URL" && [ -s "$TMP" ] && NAME="$(basename "$PKG_URL")" && break
             die "download failed: $PKG_URL"
         fi
     done
