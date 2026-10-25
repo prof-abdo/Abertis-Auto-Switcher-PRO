@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import struct
 import sys
 import tempfile
@@ -1482,3 +1483,57 @@ class ToolSharedLibsTests(unittest.TestCase):
             messages = []
             self.assertFalse(setup._pm_install_library(
                 "libdvbcsa.so.1", messages))
+
+
+class AstraInitProvisioningTests(unittest.TestCase):
+    """v1.9.15: provision /etc/init.d/astra-sm from the plugin itself.
+
+    postinst only created it when /usr/bin/astra existed at install time;
+    on a fresh receiver the binary arrives later, so astra never started.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.init_path = os.path.join(self.tmp, "astra-sm")
+        self.unit_path = os.path.join(self.tmp, "astra-sm.service")
+        self.bin_path = os.path.join(self.tmp, "astra")
+        with open(self.bin_path, "w") as f:
+            f.write("#!/bin/sh\nexit 0\n")
+        os.chmod(self.bin_path, 0o755)
+
+    def _run_provision(self):
+        init = os.path.join(self.tmp, "init")
+        unit = os.path.join(self.tmp, "unit")
+        with mock.patch.object(setup, "ASTRA_INIT", self.init_path), \
+             mock.patch.object(setup, "ASTRA_UNIT", self.unit_path), \
+             mock.patch.object(setup, "ASTRA_BIN", self.bin_path):
+            messages = []
+            ok, msg = setup._ensure_astra_init(messages)
+        return ok, msg, messages, init, unit
+
+    def test_creates_both_files_when_missing(self):
+        for p in (self.init_path, self.unit_path):
+            self.assertFalse(os.path.exists(p))
+        ok, msg, messages, _, _ = self._run_provision()
+        self.assertTrue(ok)
+        self.assertTrue(os.path.exists(self.init_path))
+        self.assertTrue(os.path.exists(self.unit_path))
+        self.assertTrue(os.access(self.init_path, os.X_OK))
+        with open(self.init_path) as f:
+            self.assertEqual(f.read(), setup.ASTRA_INIT_SH)
+        with open(self.unit_path) as f:
+            self.assertEqual(f.read(), setup.ASTRA_UNIT_SH)
+
+    def test_never_touches_existing_files(self):
+        with open(self.init_path, "w") as f:
+            f.write("IMAGE OWNED\n")
+        self._run_provision()
+        with open(self.init_path) as f:
+            self.assertEqual(f.read(), "IMAGE OWNED\n")
+
+    def test_noop_without_astra_binary(self):
+        os.remove(self.bin_path)
+        ok, msg, messages, _, _ = self._run_provision()
+        self.assertFalse(ok)
+        self.assertFalse(os.path.exists(self.init_path))

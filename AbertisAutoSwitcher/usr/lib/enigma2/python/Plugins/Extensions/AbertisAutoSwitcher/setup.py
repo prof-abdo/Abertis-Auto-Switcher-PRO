@@ -31,6 +31,8 @@ ABERTIS_SCRIPT_B64 = "IyEvdXNyL2Jpbi9lbnYgcHl0aG9uCiMgLSotIGNvZGluZzogdXRmLTggLS
 ASTRA_CONF = "/etc/astra/astra.conf"
 ASTRA_CONF_BACKUP = ASTRA_CONF + ".abetrisauto.bak"
 ASTRA_INIT = "/etc/init.d/astra-sm"
+ASTRA_UNIT = "/etc/systemd/system/astra-sm.service"
+ASTRA_BIN = "/usr/bin/astra"
 ASTRA_SCRIPT = "/etc/astra/scripts/abertis"
 OSCAM_SERVER = "/etc/tuxbox/config/oscam.server"
 OSCAM_SERVICES = "/etc/tuxbox/config/oscam.services"
@@ -620,6 +622,133 @@ def astra_port_owner(port=ASTRA_PORT):
     if all("astra" in (cmd or "").lower() for cmd in pids.values()):
         return "astra", owners
     return "busy", owners
+
+
+# Provisioning of the astra-sm init script + systemd unit, mirroring the
+# postinst heredocs.  postinst can only create them when /usr/bin/astra
+# already exists at package-install time; on a fresh receiver the plugin
+# deploys the binary later (ensure_astra_tools), so the plugin provisions
+# the service itself at setup time.  Only-if-missing: an image-owned
+# script or unit is never touched.
+ASTRA_INIT_SH = """#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          astra-sm
+# Required-Start:    $local_fs $network
+# Required-Stop:     $local_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: astra-sm streaming (Abertis T2-MI de-encapsulation)
+### END INIT INFO
+
+DAEMON=/usr/bin/astra
+CONF=/etc/astra/astra.conf
+PIDFILE=/var/run/astra.pid
+LOGFILE=/tmp/astra.log
+
+is_running() {
+    pidof astra >/dev/null 2>&1
+}
+
+case "$1" in
+    start)
+        if is_running; then
+            echo "astra-sm already running"
+            exit 0
+        fi
+        [ -x "$DAEMON" ] || { echo "astra binary missing"; exit 1; }
+        [ -f "$CONF" ] || { echo "astra.conf missing"; exit 1; }
+        rm -f "$PIDFILE"
+        nohup "$DAEMON" --pid "$PIDFILE" --log "$LOGFILE" "$CONF" >/dev/null 2>&1 &
+        sleep 1
+        if is_running; then
+            echo "astra-sm started"
+            exit 0
+        fi
+        echo "astra-sm failed to start"
+        exit 1
+        ;;
+    stop)
+        if [ -f "$PIDFILE" ]; then
+            kill "$(cat "$PIDFILE")" 2>/dev/null
+        fi
+        for p in $(pidof astra); do
+            kill "$p" 2>/dev/null
+        done
+        rm -f "$PIDFILE"
+        echo "astra-sm stopped"
+        ;;
+    restart)
+        "$0" stop
+        sleep 1
+        "$0" start
+        ;;
+    status)
+        if is_running; then
+            echo "astra-sm running (pid $(pidof astra))"
+            exit 0
+        fi
+        echo "astra-sm stopped"
+        exit 3
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit 0
+"""
+
+ASTRA_UNIT_SH = """[Unit]
+Description=Astra SM (Abertis T2-MI de-encapsulation)
+After=network.target enigma2.service
+
+[Service]
+Type=forking
+PIDFile=/var/run/astra.pid
+ExecStart=/etc/init.d/astra-sm start
+ExecStop=/etc/init.d/astra-sm stop
+TimeoutStartSec=30
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=graphical.target
+"""
+
+
+def _ensure_astra_init(messages):
+    """Create /etc/init.d/astra-sm and its systemd unit when they are absent.
+
+    Calls are idempotent and never overwrite the image's own astra-sm:
+    nothing is written when the files already exist.
+    """
+    if not os.path.exists(ASTRA_BIN):
+        return False, "no %s - init script not created" % ASTRA_BIN
+    changed = False
+    if not os.path.exists(ASTRA_INIT):
+        try:
+            with open(ASTRA_INIT, "w") as f:
+                f.write(ASTRA_INIT_SH)
+            os.chmod(ASTRA_INIT, 0o755)
+            messages.append("created %s (was missing)" % ASTRA_INIT)
+            changed = True
+        except Exception as e:
+            return False, "could not create %s: %s" % (ASTRA_INIT, e)
+    if not os.path.exists(ASTRA_UNIT):
+        try:
+            with open(ASTRA_UNIT, "w") as f:
+                f.write(ASTRA_UNIT_SH)
+            os.chmod(ASTRA_UNIT, 0o644)
+            messages.append("created %s" % ASTRA_UNIT)
+            try:
+                subprocess.call(("systemctl", "daemon-reload"))
+                subprocess.call(("systemctl", "enable", "astra-sm.service"))
+            except Exception:
+                pass
+        except Exception as e:
+            messages.append("could not create %s: %s" % (ASTRA_UNIT, e))
+    return True, ("astra init script provisioned" if changed
+                  else "astra init script already present")
 
 
 def controlled_astra_restart():
@@ -1337,6 +1466,8 @@ def run_full_setup(restart_configs=True):
     else:
         state, owner_txt = astra_port_owner()
         logger.log("port %d: %s" % (ASTRA_PORT, owner_txt))
+        init_ok, init_msg = _ensure_astra_init([])
+        logger.log(init_msg)
         ensure_astra_conf()
         astra_ok, astra_changed, astra_message = ensure_astra_streams(feeds=feeds)
         logger.log(astra_message)
