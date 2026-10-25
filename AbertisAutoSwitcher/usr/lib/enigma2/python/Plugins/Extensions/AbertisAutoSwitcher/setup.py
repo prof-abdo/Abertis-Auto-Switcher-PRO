@@ -540,6 +540,88 @@ def astra_pids():
     return output.split()
 
 
+ASTRA_PORT = 9999
+
+
+def _tcp_listen_inodes(port):
+    """Inode numbers of sockets listening on <port> (from /proc/net/tcp*)."""
+    inodes = []
+    for path in ("/proc/net/tcp", "/proc/net/tcp6"):
+        try:
+            with open(path) as f:
+                lines = f.read().splitlines()
+        except Exception:
+            continue
+        for line in lines[1:]:
+            parts = line.split()
+            if len(parts) < 10:
+                continue
+            try:
+                if int(parts[1].split(":")[1], 16) != port:
+                    continue
+                if parts[3] == "0A":  # TCP_LISTEN
+                    inodes.append(parts[9])
+            except Exception:
+                continue
+    return inodes
+
+
+def _socket_inode_users(inode):
+    """[(pid, command name)] of the processes holding a socket inode."""
+    users = []
+    try:
+        names = os.listdir("/proc")
+    except Exception:
+        return users
+    for name in names:
+        if not name.isdigit():
+            continue
+        fddir = "/proc/%s/fd" % name
+        try:
+            fds = os.listdir(fddir)
+        except Exception:
+            continue
+        for fd in fds:
+            try:
+                link = os.readlink(os.path.join(fddir, fd))
+            except Exception:
+                link = ""
+            if link == "socket:[%s]" % inode:
+                cmd = ""
+                try:
+                    with open("/proc/%s/comm" % name) as f:
+                        cmd = f.read().strip()
+                except Exception:
+                    pass
+                users.append((int(name), cmd))
+                break
+    return users
+
+
+def astra_port_owner(port=ASTRA_PORT):
+    """Describe who owns the astra output port.
+
+    Returns ("free", "free"), ("astra", "astra (pid N)") when one of our
+    processes is listening, ("busy", "<cmd> (pid N), ...") when a foreign
+    service has bound the port, or ("unknown", ...) when /proc cannot be
+    read (development systems).
+    """
+    pids = {}
+    try:
+        for inode in _tcp_listen_inodes(port):
+            for pid, cmd in _socket_inode_users(inode):
+                pids.setdefault(pid, cmd)
+    except Exception as e:
+        return "unknown", "status unknown (%s)" % e
+    if not pids:
+        return "free", "free"
+    owners = ", ".join("%s (pid %d)" % (cmd or "?", pid)
+                       for pid, cmd in sorted(pids.items()))
+    if all("astra" in (cmd or "").lower() for cmd in pids.values()):
+        return "astra", owners
+    return "busy", owners
+
+
 def controlled_astra_restart():
     """Restart astra only when exactly one instance is running.
 
@@ -553,6 +635,11 @@ def controlled_astra_restart():
             len(pids), ", ".join(pids))
     if not os.path.exists(ASTRA_INIT):
         return False, "refusing astra restart: %s not found" % ASTRA_INIT
+    state, owner_txt = astra_port_owner()
+    if state == "busy":
+        return False, ("refusing astra restart: TCP port %d is held by "
+                       "%s - stop or disable that service first"
+                       % (ASTRA_PORT, owner_txt))
     try:
         rc = subprocess.call([ASTRA_INIT, "restart"])
     except Exception as e:
@@ -568,6 +655,10 @@ def controlled_astra_restart():
             return False, "astra restart left %d processes (%s)" % (
                 len(pids), ", ".join(pids))
         time.sleep(0.5)
+    state, owner_txt = astra_port_owner()
+    if state != "free":
+        return False, "astra did not start within 15s (port %d: %s)" % (
+            ASTRA_PORT, owner_txt)
     return False, "astra did not start within 15s"
 
 
@@ -586,6 +677,11 @@ def restart_astra():
             return True
     except Exception as e:
         logger.log("astra pid check failed: %s" % e)
+    state, owner_txt = astra_port_owner()
+    if state == "busy":
+        logger.log("port %d held by %s - skipping astra start"
+                   % (ASTRA_PORT, owner_txt))
+        return True
     try:
         if os.path.exists("/var/run/astra.pid"):
             os.remove("/var/run/astra.pid")
@@ -995,12 +1091,15 @@ def _same_file(left, right):
 
 
 # Libraries the patched astra tools are dynamically linked against.  Some
-# images (e.g. openATV 8) ship libdvbcsa but not OpenSSL 3: the library the
-# package carries inside the plugin directory is then deployed into
-# /usr/lib as a NEW file - an existing system library is never touched.
+# images (e.g. openATV 8) ship libdvbcsa but not OpenSSL 3, third-party
+# DreamOS images (e.g. DreamELite) ship neither: a needed library the
+# package carries inside the plugin directory is deployed into /usr/lib as
+# a NEW file - an existing system library is never touched.  When neither
+# the image nor the package provides a library, the image package manager
+# (apt-get / opkg) is tried once before keeping the installed binary.
 TOOL_SHARED_LIBS = {
-    "astra": ("libcrypto.so.3",),
-    "t2mi_decap": ("libcrypto.so.3",),
+    "astra": ("libcrypto.so.3", "libdvbcsa.so.1"),
+    "t2mi_decap": ("libcrypto.so.3", "libdvbcsa.so.1"),
     "spammer": (),
 }
 
@@ -1026,6 +1125,59 @@ def _lib_on_image(name):
     return False
 
 
+# Missing libraries that can still be provided by the image's own package
+# manager (offline receivers simply keep their installed binary - nothing
+# is ever removed or overwritten).
+TOOL_LIB_PACKAGES = {
+    "libdvbcsa.so.1": ("libdvbcsa1", "libdvbcsa"),
+}
+
+
+def _pm_install_library(lib, messages):
+    """Best-effort package-manager install of a missing shared library.
+
+    Only used when the library is missing on the image and the package
+    does not ship it: opkg on opkg images, apt-get on dpkg images.  One
+    attempt per boot (marker file in /tmp keeps an offline receiver from
+    retrying a slow lookup over and over).
+    """
+    names = TOOL_LIB_PACKAGES.get(lib)
+    if not names:
+        return False
+    marker = "/tmp/.abetris_pm_" + lib.replace(".", "_")
+    if os.path.exists(marker):
+        return False
+    log = "/tmp/abetris_lib.log"
+    for pkg in names:
+        try:
+            if os.path.exists("/usr/bin/opkg"):
+                cmd = ("/usr/bin/opkg", "install", pkg)
+            elif os.path.exists("/usr/bin/apt-get"):
+                cmd = ("/usr/bin/apt-get", "install", "-y", pkg)
+            else:
+                return False
+            with open(log, "ab") as out:
+                rc = subprocess.call(cmd, stdout=out,
+                                     stderr=subprocess.STDOUT)
+        except Exception as e:
+            messages.append("%s: package-manager install failed: %s"
+                            % (lib, e))
+            return False
+        finally:
+            try:
+                open(marker, "w").close()
+            except Exception:
+                pass
+        if rc == 0 and _lib_on_image(lib):
+            messages.append("%s: installed from the image feed (%s)"
+                            % (lib, pkg))
+            return True
+    messages.append("%s: the image package manager did not provide it "
+                    "(on DreamOS try manually: apt-get update && "
+                    "apt-get install -y libdvbcsa1)" % lib)
+    return False
+
+
 def _ensure_tool_shared_libs(tool, here, messages):
     """Make sure the shared libraries the shipped tool needs exist.
 
@@ -1039,6 +1191,8 @@ def _ensure_tool_shared_libs(tool, here, messages):
             continue
         src = os.path.join(here, lib)
         if not os.path.isfile(src):
+            if _pm_install_library(lib, messages):
+                continue
             messages.append("%s: this image lacks %s and the package "
                             "does not ship it - keeping the installed "
                             "binary" % (tool, lib))
@@ -1088,9 +1242,17 @@ def ensure_astra_tools():
             # architectures keep whatever the image or the user installed
             messages.append("%s: no %s binary shipped, leaving the "
                             "installed one untouched" % (target, arch))
+            if target.endswith("/astra") and os.path.exists(target) \
+                    and not _lib_on_image("libdvbcsa.so.1"):
+                # the image's own astra needs libdvbcsa too on some images
+                _pm_install_library("libdvbcsa.so.1", messages)
             continue
         try:
             if os.path.exists(target) and _same_file(src, target):
+                # libs are re-checked even when the binary is already in
+                # place: some images (DreamELite on Dream One) lack
+                # libdvbcsa.so.1 although astra was installed before
+                _ensure_tool_shared_libs(name, here, messages)
                 messages.append("%s: already installed" % target)
                 continue
             if not _ensure_tool_shared_libs(name, here, messages):
@@ -1173,6 +1335,8 @@ def run_full_setup(restart_configs=True):
     if not astra_present():
         logger.log("astra binary NOT found - skipping astra steps (install astra-sm manually)")
     else:
+        state, owner_txt = astra_port_owner()
+        logger.log("port %d: %s" % (ASTRA_PORT, owner_txt))
         ensure_astra_conf()
         astra_ok, astra_changed, astra_message = ensure_astra_streams(feeds=feeds)
         logger.log(astra_message)

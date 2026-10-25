@@ -1450,3 +1450,35 @@ class AllFeedAutomationTests(unittest.TestCase):
 
         self.assertFalse(auto.busy)
         auto.start.assert_called_once_with(next_ref)
+
+
+class ToolSharedLibsTests(unittest.TestCase):
+    """v1.9.14: libdvbcsa.so.1 provisioning - never brick a working astra."""
+
+    def test_tool_shared_libs_include_libdvbcsa(self):
+        self.assertIn("libdvbcsa.so.1", setup.TOOL_SHARED_LIBS["astra"])
+        self.assertIn("libdvbcsa.so.1", setup.TOOL_SHARED_LIBS["t2mi_decap"])
+        self.assertIn("libcrypto.so.3", setup.TOOL_SHARED_LIBS["astra"])
+
+    def test_missing_library_falls_back_to_package_manager(self):
+        calls = []
+
+        def fake_pm(lib, messages):
+            calls.append(lib)
+            return True
+
+        with mock.patch.object(setup, "_pm_install_library", fake_pm):
+            messages = []
+            ok = setup._ensure_tool_shared_libs(
+                "astra", "nonexistent-dir", messages)
+        self.assertIn("libdvbcsa.so.1", calls)
+        self.assertIn("libcrypto.so.3", calls)
+        self.assertTrue(ok)
+        self.assertEqual(messages, [])
+
+    def test_pm_install_library_gives_up_without_package_managers(self):
+        with mock.patch.object(setup.os.path, "exists",
+                               return_value=False):
+            messages = []
+            self.assertFalse(setup._pm_install_library(
+                "libdvbcsa.so.1", messages))
