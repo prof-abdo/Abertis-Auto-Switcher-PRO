@@ -918,6 +918,10 @@ def ensure_abertis_script():
                 f.write(data)
             os.chmod(tmp, 0o755)
             try:
+                backup = ABERTIS_SCRIPT + ".orig"
+                if not os.path.exists(backup):
+                    shutil.copy2(ABERTIS_SCRIPT, backup)
+                    logger.log("previous abertis tool kept as %s" % backup)
                 os.rename(tmp, ABERTIS_SCRIPT)
             except Exception:
                 os.remove(tmp)
