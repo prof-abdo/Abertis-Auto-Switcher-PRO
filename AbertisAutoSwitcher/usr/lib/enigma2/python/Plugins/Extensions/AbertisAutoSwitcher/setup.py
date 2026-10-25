@@ -8,6 +8,20 @@ import stat
 import subprocess
 import time
 from . import logger
+import platform
+
+
+def _get_receiver_arch():
+    """Return receiver architecture (arm64/arm/mips) from platform.machine()."""
+    m = platform.machine().lower()
+    if "aarch64" in m or "arm64" in m:
+        return "arm64"
+    if "arm" in m:
+        return "arm"
+    if "mips" in m:
+        return "mips"
+    return "arm64"
+
 
 ASTRA_BIN_CANDIDATES = ["/usr/bin/astra", "/usr/bin/astra-sm", "/etc/astra/astra"]
 ABERTIS_SCRIPT = "/etc/astra/scripts/abertis"
@@ -845,7 +859,8 @@ def _restart_oscam_init_script():
 
 
 def ensure_abertis_script():
-    """Make sure /etc/astra/scripts/abertis is the native aarch64 tool.
+    """Make sure /etc/astra/scripts/abertis is a native tool of the
+    receiver architecture.
 
     The native binary (bundled with the plugin) is the Abertis T2-MI
     de-encapsulator: it turns the scrambled T2-MI PID of a feed into the
@@ -853,6 +868,20 @@ def ensure_abertis_script():
     extracts the PID payload and is therefore NOT equivalent, it is just
     there to have something that runs.
     """
+    # Per-architecture binary selection: prefer arch/<arch>/abertis.  When
+    # the package ships no binary for this receiver (e.g. the astra tools
+    # only exist as arm64, the abertis tool only for arm64/arm/mips), an
+    # aarch64 binary must NEVER overwrite a working one on a mips or 32-bit
+    # arm box: keep the installed one or fall back to the python script.
+    arch = _get_receiver_arch()
+    here = os.path.dirname(os.path.abspath(__file__))
+    arch_binary = os.path.join(here, "arch", arch, "abertis")
+    native_src = None
+    if os.path.isfile(arch_binary):
+        native_src = arch_binary
+    elif arch == "arm64":
+        # the tool shipped loose in the plugin directory is aarch64 too
+        native_src = BUNDLED_NATIVE
     try:
         need = True
         if os.path.exists(ABERTIS_SCRIPT):
@@ -860,24 +889,29 @@ def ensure_abertis_script():
             if mach is None:
                 # not an ELF (python/shell script) -> keep
                 need = False
-            elif mach == 0xB7:
-                # AArch64 native -> keep the known-good binary
+            elif native_src is None:
+                # nothing native for this receiver architecture: never
+                # touch a binary that is already installed
+                logger.log("no native abertis tool for arch %s - "
+                           "keeping the installed binary" % arch)
                 need = False
-            elif mach == 0x28:
-                # ARM 32-bit -> replace with the aarch64 native
-                need = True
             else:
-                need = True
+                target_mach = _elf_machine(native_src)
+                # keep the binary when it matches what we would install
+                if mach == target_mach:
+                    need = False
         if not need:
-            logger.log("abertis script already present (native aarch64 or script)")
+            logger.log("abertis script already present (arch=%s)" % arch)
             return True
+        if native_src is None:
+            raise IOError("no native abertis tool for arch %s" % arch)
         _makedirs(os.path.dirname(ABERTIS_SCRIPT))
     except Exception:
         pass
-    # 1) the bundled aarch64 native tool
+    # 1) the native tool for the receiver architecture
     try:
-        if os.path.exists(BUNDLED_NATIVE):
-            with open(BUNDLED_NATIVE, "rb") as f:
+        if native_src is not None and os.path.exists(native_src):
+            with open(native_src, "rb") as f:
                 data = f.read()
             tmp = ABERTIS_SCRIPT + ".new"
             with open(tmp, "wb") as f:
@@ -888,7 +922,7 @@ def ensure_abertis_script():
             except Exception:
                 os.remove(tmp)
                 raise
-            logger.log("installed native aarch64 abertis tool at %s" % ABERTIS_SCRIPT)
+            logger.log("installed native abertis tool (arch=%s) at %s" % (arch, ABERTIS_SCRIPT))
             return True
     except Exception as e:
         logger.log("native abertis install failed: %s" % e)
@@ -959,6 +993,11 @@ def _same_file(left, right):
 def ensure_astra_tools():
     """Install the astra-sm binaries that the package ships.
 
+    Per-architecture: checks for arch/<arch>/{astra,t2mi_decap,spammer} first
+    (the package ships the full set for aarch64).  The loose binaries in the
+    plugin directory are aarch64 too, so they are only used as a fallback on
+    arch64 receivers - a wrong-architecture binary is never deployed.
+
     Returns (changed, messages).  The call is idempotent: a file that is
     already the shipped one is left alone, and a file that is replaced is
     backed up once.  Replacing a running binary is done with a rename, so
@@ -968,10 +1007,18 @@ def ensure_astra_tools():
     messages = []
     changed = False
     here = os.path.dirname(os.path.abspath(__file__))
+    arch = _get_receiver_arch()
+    arch_dir = os.path.join(here, "arch", arch)
     for name, target in ASTRA_TOOLS:
-        src = os.path.join(here, name)
+        src = os.path.join(arch_dir, name)
+        if not os.path.isfile(src) and arch == "arm64":
+            # the binaries shipped loose in the plugin directory are aarch64
+            src = os.path.join(here, name)
         if not os.path.isfile(src):
-            messages.append("%s: not shipped, skipped" % target)
+            # astra/t2mi_decap/spammer are only shipped for arm64; on other
+            # architectures keep whatever the image or the user installed
+            messages.append("%s: no %s binary shipped, leaving the "
+                            "installed one untouched" % (target, arch))
             continue
         try:
             if os.path.exists(target) and _same_file(src, target):
@@ -987,7 +1034,7 @@ def ensure_astra_tools():
             os.chmod(tmp, 0o755)
             os.rename(tmp, target)
             changed = True
-            messages.append("%s: installed" % target)
+            messages.append("%s: installed (arch=%s)" % (target, arch))
         except Exception as e:
             messages.append("%s: %s" % (target, e))
     return changed, messages
@@ -997,7 +1044,7 @@ def ensure_oscam_abertis():
     """Start the Abertis-capable OSCam binary if it is not running.
 
     DreamOS 2.6 ships oscam_2.service (running /usr/bin/oscam_2) which does
-    not have the Abertis BISS keys.  The IPK ships OSCam_11964-803, which
+    not have the Abertis BISS keys.  The DEB ships OSCam_11964-803, which
     does.  If it is not running, start it directly; the plugin never
     stops or reconfigures an already running OSCam.
     """

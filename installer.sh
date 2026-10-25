@@ -16,8 +16,9 @@
 set -e
 
 REPO="prof-abdo/Abertis-Auto-Switcher-PRO"
-RELEASE="v1.9.12"
+RELEASE="v1.9.13"
 PKG="enigma2-plugin-extensions-abertisautoswitcher"
+PKG_EXT="deb"
 BACKUP_DIR="/root/abetris-backup"
 TMP="/tmp/abertisautoswitcher-install.$$"
 PKG_DIR=""
@@ -52,12 +53,11 @@ fetch() {
 	fi
 }
 
-IPK="${PKG}_${RELEASE#v}_all.ipk"
-URL="https://github.com/${REPO}/releases/download/${RELEASE}/${IPK}"
+DEB="${PKG}_${RELEASE#v}_all.deb"
+URL="https://github.com/${REPO}/releases/download/${RELEASE}/${DEB}"
 
-say "downloading ${IPK}"
+say "downloading ${DEB}"
 if ! fetch "$URL" || [ ! -s "$TMP" ]; then
-	# fall back to whatever the latest release provides
 	say "pinned release not available, asking GitHub for the latest one"
 	if command -v wget >/dev/null 2>&1; then
 		JSON="$(wget -qO- "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null || true)"
@@ -68,8 +68,10 @@ if ! fetch "$URL" || [ ! -s "$TMP" ]; then
 	[ -n "$URL" ] || die "no release asset found for ${REPO}"
 	fetch "$URL" || die "download failed: $URL"
 	[ -s "$TMP" ] || die "downloaded file is empty"
-	IPK="$(basename "$URL")"
+	DEB="$(basename "$URL")"
 fi
+IPK="$DEB"
+PKG_EXT="deb"
 
 # keep the real file name, dpkg shows it in its output
 PKG_DIR="/tmp/abertisautoswitcher-pkg.$$"

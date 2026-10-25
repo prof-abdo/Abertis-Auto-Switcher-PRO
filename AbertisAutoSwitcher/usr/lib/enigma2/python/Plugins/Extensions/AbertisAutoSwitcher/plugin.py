@@ -20,7 +20,7 @@ from . import logger, setup, lamedb_fix, autostart
 LAMEDB = "/etc/enigma2/lamedb"
 BACKUP_DIR = "/root/abetris-backup"
 PKG = "enigma2-plugin-extensions-abertisautoswitcher"
-VERSION = "1.9.12"
+VERSION = "1.9.13"
 AUTHOR = "Kingcs / Prof-abdo"
 THANKS = "mouadhada (AbetrisFlagSwitch) and Saber Hisham SH"
 
@@ -107,7 +107,7 @@ class AbertisAutoSwitcherScreen(Screen):
             "btn_yellow": "Refresh status",
             "btn_blue": "Diagnostics",
             "btn_ok": "OK  About",
-            "footer": "Abertis Auto Switcher PRO  v1.9.12  |  Kingcs / Prof-abdo  |  mouadhada + Saber Hisham SH",
+            "footer": "Abertis Auto Switcher PRO  v1.9.13  |  Kingcs / Prof-abdo  |  mouadhada + Saber Hisham SH",
         }
         for name, text in labels.items():
             self[name] = Label(_to_str(text))
