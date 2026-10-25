@@ -994,6 +994,71 @@ def _same_file(left, right):
         return False
 
 
+# Libraries the patched astra tools are dynamically linked against.  Some
+# images (e.g. openATV 8) ship libdvbcsa but not OpenSSL 3: the library the
+# package carries inside the plugin directory is then deployed into
+# /usr/lib as a NEW file - an existing system library is never touched.
+TOOL_SHARED_LIBS = {
+    "astra": ("libcrypto.so.3",),
+    "t2mi_decap": ("libcrypto.so.3",),
+    "spammer": (),
+}
+
+
+def _lib_on_image(name):
+    """True when the dynamic loader can find <name> on this image."""
+    for path in ("/usr/lib/" + name, "/usr/lib64/" + name,
+                 "/lib/" + name, "/lib64/" + name):
+        if os.path.exists(path):
+            return True
+    try:
+        p = subprocess.Popen(("ldconfig", "-p"),
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        try:
+            out = p.communicate()[0]
+        except Exception:
+            out = ""
+        if name in out.decode("utf-8", "ignore"):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _ensure_tool_shared_libs(tool, here, messages):
+    """Make sure the shared libraries the shipped tool needs exist.
+
+    Returns True when the shipped binary can be loaded by the image,
+    False when a required library is neither present nor shipped - in
+    that case the installed binary is kept (never brick a working setup).
+    """
+    ok = True
+    for lib in TOOL_SHARED_LIBS.get(tool, ()):
+        if _lib_on_image(lib):
+            continue
+        src = os.path.join(here, lib)
+        if not os.path.isfile(src):
+            messages.append("%s: this image lacks %s and the package "
+                            "does not ship it - keeping the installed "
+                            "binary" % (tool, lib))
+            ok = False
+            continue
+        target = "/usr/lib/" + lib
+        try:
+            shutil.copy2(src, target)
+            os.chmod(target, 0o644)
+            messages.append("deployed %s into /usr/lib (image lacked it)" % lib)
+            try:
+                subprocess.call(("ldconfig",))
+            except Exception:
+                pass
+        except Exception as e:
+            messages.append("%s: could not deploy %s: %s" % (tool, lib, e))
+            ok = False
+    return ok
+
+
 def ensure_astra_tools():
     """Install the astra-sm binaries that the package ships.
 
@@ -1027,6 +1092,8 @@ def ensure_astra_tools():
         try:
             if os.path.exists(target) and _same_file(src, target):
                 messages.append("%s: already installed" % target)
+                continue
+            if not _ensure_tool_shared_libs(name, here, messages):
                 continue
             if os.path.exists(target):
                 backup = target + ".orig"

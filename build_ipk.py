@@ -54,6 +54,13 @@ def _gather_data_entries():
         if os.path.exists(path):
             entries.append((PLUGIN_REL + "/" + tool, path, 0o755))
 
+    # Shared libraries the shipped astra tools need (deployed into
+    # /usr/lib by setup.py when the image lacks them)
+    for lib in ("libcrypto.so.3",):
+        path = os.path.join(PLUGIN_DIR, lib)
+        if os.path.exists(path):
+            entries.append((PLUGIN_REL + "/" + lib, path, 0o644))
+
     # Per-arch binaries under arch/arm64/, arch/arm/, arch/mips/
     arch_dir = os.path.join(PLUGIN_DIR, "arch")
     if os.path.isdir(arch_dir):

@@ -206,6 +206,7 @@ if [ -x /usr/bin/OSCam_11964-803 ] && ! pidof OSCam_11964-803 >/dev/null 2>&1; t
 fi
 
 VER="$(grep -m1 'VERSION = ' "$PLUGIN_DIR/plugin.py" 2>/dev/null | cut -d'"' -f2)"
+ldconfig >/dev/null 2>&1 || true
 echo "Abertis Auto Switcher PRO ${VER:-} installed (all Abertis feeds: A-rules + astra streams)."
 echo "The plugin loads at the next Enigma2 start of your choice - no reboot needed."
 exit 0
