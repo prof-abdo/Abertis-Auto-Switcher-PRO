@@ -1,0 +1,101 @@
+--- ملاحظات للناشر (ليست جزءا من المنشور) ---
+1) انسخ كل ما هو موجود بين السطرين «--- بداية المنشور ---» و «--- نهاية المنشور ---» فقط، والصقه في محرر منتدى تونس-سات.
+2) استبدل العلامة [ATTACH]…[/ATTACH] باللقطات بعد رفعها من المحرر (زر «رفع ملف»): abetris_osd_1.png و abetris_osd_2.png و abetris_osd_3.png، وأنزل كل لقطة مكان العلامة.
+3) العنوان المقترح للموضوع:
+   «إضافة Abertis Auto Switcher PRO v1.9.13 - التشغيل التلقائي لجميع تغذيات أبيرتيس على القمر 30 غرباً (Enigma2: DreamOS + OpenATV، حزمتان .deb و.ipk، دعم المعماريات في حزمة واحدة)»
+
+--- بداية المنشور ---
+
+[CENTER][SIZE="5"][B]Abertis Auto Switcher PRO v1.9.13[/B][/SIZE]
+[SIZE="4"]التشغيل التلقائي لجميع تغذيات أبيرتيس (T2-MI) على القمر 30 غرباً
+Enigma2: صور DreamOS و OpenATV معاً - حزمتان .deb و .ipk - دعم المعماريات في حزمة واحدة[/SIZE]
+
+[B][URL='https://github.com/prof-abdo/Abertis-Auto-Switcher-PRO']المشروع على GitHub: github.com/prof-abdo/Abertis-Auto-Switcher-PRO[/URL][/B]
+[COLOR="Purple"][B]حصرياً في منتدى تونس-سات[/B][/COLOR][/CENTER]
+
+السلام عليكم ورحمة الله وبركاته،
+
+أهلاً بكم إخواني أعضاء منتدى تونس-سات الكرام،
+
+يسعدني أن أضع بين أيديكم إضافتي Abertis Auto Switcher PRO: حزمة أوتوماتيك كاملة لتشغيل جميع تغذيات قنوات أبيرتيس (Abertis) على القمر 30 غرباً (Hispasat)، طوّرتها وجرّبتها عملياً على جهاز Dreambox Two تحت [B]DreamOS 2.6 (بايثون 2.7)[/B] وتحت [B]openATV 8.0.1 (بايثون 3.14)[/B].
+
+[SIZE="4"][B]ماذا تفعل الإضافة؟[/B][/SIZE]
+
+على القمر 30 غرباً تبثُّ تغذيات أبيرتيس عشرات القنوات (المفتوحة والمشفَّرة BISS) مجمَّعة داخل مولتيبلكس T2-MI واحد. تظهر كل تغذية على الإنجيما2 كمجموعة PIDs مستقلة: [COLOR="RoyalBlue"]Abertis PID 301 / 303 / 420 / 2025 / 2026 / 2050 / 8001 / 8008 ...[/COLOR]. في العادة تضطر إلى إعادة ضبط astra-sm و oscam.dvbapi و SoftCam.Key و lamedb يدوياً لكل تغذية، ومع كل تغيّر في التغذية. هذه الإضافة تنجز ذلك كله بضغطة واحدة - أو تلقائياً بعد كل إقلاع.
+
+[B]التسلسل التلقائي (من F1 إلى F5):[/B] عندما تنتقل (Zap) إلى أي رابط streamrelay من إعدادات الأخ Ciefp بالصيغة [COLOR="RoyalBlue"]http://127.0.0.1:8001/abertis/pid<الرقم>[/COLOR] تقوم الإضافة بما يلي:
+[LIST=1]
+[*]تقرأ الملف /etc/enigma2/lamedb وتجد المرجع (Service Reference) الخاص بـ "Abertis PID <الرقم>"، مع PMT PID الخارجي و data PID بصيغة c:00xxxx
+[*][B]مرحلة التعلُّم (F1)[/B] - تنقل القناة إلى الوضع F1 وتحفظ data PID + PMT PID، ثم تطلب من الإنجيما2 إعادة تحميل lamedb حتى يتعرَّف على برنامج CA الخاص بالقناة المشفَّرة
+[*][B]التشغيل (F5)[/B] - تعود إلى F5 مع data PID المحفوظ وتعيد التحميل مرة أخرى - فتعمل الصورة ✔
+[*]كل شيء يُسجَّل لحظياً، وتؤخذ نسخة احتياطية قبل أي تعديل، والعملية قابلة للتكرار (idempotent): نفّذها ألف مرة دون أن يحدث أي تكرار أو تلف
+[/LIST]
+
+[B]كذلك تنجز الإضافة تلقائياً:[/B]
+[LIST]
+[*]قاعدة [B]A:[/B] واحدة لكل تغذية لمحاكاة oscam-emu في [CODE]/etc/tuxbox/config/oscam.dvbapi[/CODE] مع الاحتفاظ بنسخة احتياطية
+[*]مزامنة مفاتيح BISS الناقصة بين [CODE]softcam.key[/CODE] و [CODE]SoftCam.Key[/CODE] (oscam-emu يقرأ الملف المكتوب بأحرف كبيرة)
+[*]توليد جميع بلوكات البث الناقصة لـ astra-sm داخل [CODE]/etc/astra/astra.conf[/CODE]
+[*]كتابة [CODE]/etc/init.d/astra[/CODE] + خدمة astra-sm.service لكي يبدأ astra تلقائياً في كل إقلاع بارد (فقط إذا كانت الصورة لا تدير astra بنفسها)
+[*]سكربت صغير يُصلح lamedb [B]قبل[/B] بدء تشغيل الإنجيما2 (عبر ملف drop-in لخدمة systemd من نوع ExecStartPre) - فلا تفقد بيانات data PID بصيغة c:00xxxx بعد أي ريسكان (بحث عن القنوات)
+[*][B]حل مشكلة التقطيع (ta9ti3):[/B] ملف [CODE]/etc/sysctl.d/99-abertis.conf[/CODE] مضبوط بمخازن شبكة (socket buffers) بمقدار 16 ميغابايت - وداعاً لفقد الحزم داخل مسار streamproxy → astra → HTTP
+[/LIST]
+
+[SIZE="4"][B]الجديد في الإصدار v1.9.13[/B][/SIZE]
+[LIST]
+[*][B]صيغتا الحزم للعائلتين معاً:[/B] صور DreamOS / Debian (بنظام dpkg) تُثبِّت الحزمة [B].deb[/B]؛ وصور OpenATV / OpenPLi / opkg تُثبِّت الحزمة [B].ipk[/B] - ويكتشف [URL='https://raw.githubusercontent.com/prof-abdo/Abertis-Auto-Switcher-PRO/main/installer.sh']المثبِّت ذو السطر الواحد[/URL] نظام الحزم ويختار الصيغة المناسبة وحده.
+[*][B]حزمة واحدة لكل المعماريات:[/B] يكتشف المثبِّت معمارية الجهاز بـ uname -m وينشر الثنائيات المطابقة:
+   - على aarch64/arm64: الأدوات الكاملة (astra و t2mi_decap و spammer و abertis)
+   - على arm (32 بت) و mips: أداة abertis الأصلية الثابتة (static) لتفريغ T2-MI
+[*][B]لا تُنشر أبداً ثنائيات بمعمارية خاطئة:[/B] على أجهزة arm (32 بت) / mips تبقى الملفات المثبتة عندك كما هي دون مساس، وتُنشر فقط أداة abertis المطابقة لمعمارية جهازك - والقرار يُسجَّل في السجل.
+[*][B]الصور التي لا تملك OpenSSL 3 لن تحصل أبداً على astra معطوب:[/B] نسخة astra المعدَّلة مربوطة بمكتبة libcrypto.so.3. إذا كانت الصورة تفتقدها (مثلاً openATV 8.0.1 التي تأتي بـ libcrypto.so.4 / 1.0.2 فقط) تُنشر المكتبة المرافقة للحزمة في [CODE]/usr/lib[/CODE] [B]فقط إذا كانت غائبة[/B] ثم يُحدَّث ldconfig؛ وإذا تعذَّر توفير مكتبة ضرورية، لا تُثبَّت نسختنا إطلاقاً؛ [B]فيبقى astra الشغَّال عندك كما هو[/B]. كل ملف يتم استبداله يُحفظ مرة واحدة باسم *.orig.
+[*]المثبِّت لا يعيد الإقلاع أبداً ولا يعيد تشغيل الإنجيما2 - تُحمَّل الإضافة عند إعادة تشغيل الإنجيما2 التي تجريها بنفسك متى شئت.
+[/LIST]
+
+[SIZE="4"][B]لا شيء يُستبدَل أبداً[/B][/SIZE]
+الملفات العاملة [CODE]/etc/astra/astra.conf[/CODE] و [CODE]/etc/astra/scripts/abertis[/CODE] وملفات OSCam ومفاتيح softcam عندك لا تُستبدَل أبداً: تُضاف المدخلات الناقصة فقط، ويؤخذ من كل شيء نسخة احتياطية أولاً ( .orig / .abetrisauto.bak / /root/abetris-backup ). مفاتيح أبيرتيس تُنشر بامتداد [B]*.dist[/B] لكي تعمل الصور الجديدة (النظيفة) من أول لحظة، بينما تبقى مفاتيح الأجهزة القديمة كما هي دون مساس.
+
+[SIZE="4"][B]التثبيت (سطر واحد، بطرفية مستخدم root، لكل الصور)[/B][/SIZE]
+[CODE]wget https://raw.githubusercontent.com/prof-abdo/Abertis-Auto-Switcher-PRO/main/installer.sh -O - | /bin/sh[/CODE]
+
+[B]التثبيت اليدوي:[/B]
+[CODE]# صور DreamOS / Debian (dpkg):
+cd /tmp
+wget -O abertis-pro.deb https://github.com/prof-abdo/Abertis-Auto-Switcher-PRO/releases/download/v1.9.13/enigma2-plugin-extensions-abertisautoswitcher_1.9.13_all.deb
+dpkg -i abertis-pro.deb
+
+# صور OpenATV / OpenPLi / opkg:
+cd /tmp
+wget -O abertis-pro.ipk https://github.com/prof-abdo/Abertis-Auto-Switcher-PRO/releases/download/v1.9.13/enigma2-plugin-extensions-abertisautoswitcher_1.9.13_all.ipk
+opkg install --force-reinstall --force-overwrite abertis-pro.ipk[/CODE]
+
+الإصدارات القديمة (من v1.0 إلى v1.9.12 بصيغة ipk) تبقى متوفرة على GitHub، والمثبِّت يرقّيها تلقائياً إلى الإصدار 1.9.13.
+
+[B]القائمة:[/B] [B]Menu → Extensions → AbertisAutoSwitcher[/B] - يمكنك تشغيل «Run setup» يدوياً متى شئت؛ ويعمل التسلسل التلقائي بعد كل إقلاع وعند كل زاب على رابط Ciefp.
+
+[SIZE="4"][B]ما تحتاجه[/B][/SIZE]
+[LIST]
+[*]جهاز Enigma2 بصورة تضم dpkg (DreamOS 2.6) أو opkg (OpenATV 8 / OpenPLi)
+[*]صحن موجَّه نحو القمر 30 غرباً + [B]تونر حر[/B] (Hispasat 12583 V، مولتيبلكس T2-MI)
+[*]OSCam مع oscam-emu مثبت (يدعم BISS)
+[*]إعدادات وقوائم قنوات الأخ [B]Ciefp[/B] التي توفر روابط [COLOR="RoyalBlue"]/abertis/pid<الرقم>[/COLOR]
+[/LIST]
+
+[B]لقطات الشاشة:[/B] [ATTACH]…[/ATTACH] (بانر OSD أثناء مرحلة التعلُّم F1 / شاشة الإعدادات / عرض السجل)
+
+[SIZE="4"][B]الشكر والتقدير[/B][/SIZE]
+[LIST]
+[*][B]الأخ Ciefp[/B] - على المشروع المرجعي CiefpSettingsT2miAbertis: ثنائيات astra-sm الأصلية، أدوات abertis لكل المعماريات، ضبط sysctl، وإعدادات astra المرجعية
+[*][B]الأخوان MOHAMED_OS و Levi45[/B] - على تحديث مفاتيح أبيرتيس BISS باستمرار
+[*][B]منتدى تونس-سات وأعضاؤه الكرام[/B] - على مرجعية المعرفة والدعم
+[/LIST]
+
+[B]المصدر والدعم:[/B] [URL='https://github.com/prof-abdo/Abertis-Auto-Switcher-PRO']github.com/prof-abdo/Abertis-Auto-Switcher-PRO[/URL] - الإصدار v1.9.13 (ملف .deb لأجهزة DreamOS وملف .ipk لأجهزة OpenATV/OpenPLi). الملاحظات وردود الاختبار - خصوصاً من أصحاب أجهزة [B]arm (32 بت) / mips[/B] - مرحَّب بها جداً.
+
+[B]مُجرَّب وشغّال:[/B] Dreambox Two 4K تحت DreamOS 2.6 (dpkg) وتحت openATV 8.0.1 / opkg ببايثون 3.14 (وتعمل نسخة astra المعدَّلة مع المكتبة المرافقة libcrypto.so.3): كل تغذيات أبيرتيس تُضبط تلقائياً - FTA + BISS + مرحلة التعلُّم F1 - وتغذية PID 8008 متحقَّق منها بتزامن TS بنسبة 100%.
+
+استمتعوا! 🙂
+
+— أخوكم في الله Prof-Abdo (Kingcs)
+
+--- نهاية المنشور ---
