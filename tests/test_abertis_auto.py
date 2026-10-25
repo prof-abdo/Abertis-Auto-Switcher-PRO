@@ -1516,7 +1516,8 @@ class ToolSharedLibsTests(unittest.TestCase):
         self.assertIn("installed from the image feed", messages[0])
 
     def test_pm_install_library_updates_index_at_most_once_per_boot(self):
-        allowed = set(("/usr/bin/apt-get", "/tmp/.abetris_pm_update"))
+        allowed = set(("/usr/bin/apt-get",
+                       "/tmp/.abetris_pm_update_apt-get"))
 
         def fake_exists(path):
             return path in allowed
@@ -1537,6 +1538,34 @@ class ToolSharedLibsTests(unittest.TestCase):
             ("/usr/bin/apt-get", "install", "-y", "libdvbcsa"),
         ])
         self.assertIn("did not provide it", messages[-1])
+
+    def test_pm_install_library_falls_back_to_opkg_when_apt_fails(self):
+        """v1.9.18: some images carry both tools with a broken apt-get."""
+        allowed = set(("/usr/bin/opkg", "/usr/bin/apt-get",
+                       "/tmp/.abetris_pm_update_opkg"))
+
+        def fake_exists(path):
+            return path in allowed
+
+        with mock.patch.object(setup.os.path, "exists",
+                               side_effect=fake_exists), \
+             mock.patch.object(setup, "open", mock.mock_open()), \
+             mock.patch.object(setup, "_lib_on_image",
+                               return_value=True), \
+             mock.patch.object(setup.subprocess, "call",
+                               side_effect=[1, 1, 1, 0, 0]) as call_mock:
+            messages = []
+            self.assertTrue(setup._pm_install_library(
+                "libdvbcsa.so.1", messages))
+        calls = [c.args[0] for c in call_mock.call_args_list]
+        self.assertEqual(calls, [
+            ("/usr/bin/opkg", "install", "libdvbcsa1"),
+            ("/usr/bin/opkg", "install", "libdvbcsa"),
+            ("/usr/bin/apt-get", "install", "-y", "libdvbcsa1"),
+            ("/usr/bin/apt-get", "update"),
+            ("/usr/bin/apt-get", "install", "-y", "libdvbcsa1"),
+        ])
+        self.assertIn("installed from the image feed", messages[-1])
 
 
 class AstraInitProvisioningTests(unittest.TestCase):
