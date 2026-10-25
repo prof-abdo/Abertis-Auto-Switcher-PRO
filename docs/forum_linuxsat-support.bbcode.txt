@@ -2,13 +2,13 @@
 
 [CENTER][SIZE=5][B]Abertis Auto Switcher PRO v1.9.13[/B][/SIZE]
 [SIZE=4]Automatic T2‑MI feed playback for every Abertis channel on 30.0° W
-(DreamOS 2.6 / Enigma2 – .deb package, multi‑arch binaries)[/SIZE]
+(Enigma2 – DreamOS [B]and[/B] OpenATV – .deb + .ipk, multi‑arch binaries)[/SIZE]
 
 [B][URL='https://github.com/prof-abdo/Abertis-Auto-Switcher-PRO']GITHUB: github.com/prof-abdo/Abertis-Auto-Switcher-PRO[/URL][/B][/CENTER]
 
 Hello everyone,
 
-I am pleased to share my plugin Abertis Auto Switcher PRO – a complete automation suite for every Abertis feed on 30.0° W (Hispasat), built and tested live on a Dreambox Two (DreamOS 2.6, aarch64) with Python 2.7 and Enigma2 5.x/7.x images (OpenATV 8.x compatible).
+I am pleased to share my plugin Abertis Auto Switcher PRO – a complete automation suite for every Abertis feed on 30.0° W (Hispasat), built and tested live on a Dreambox Two – under [B]DreamOS 2.6 (Python 2.7)[/B] and under [B]openATV 8.0.1 (Python 3.14)[/B].
 
 [SIZE=4][B]What does it do?[/B][/SIZE]
 
@@ -27,37 +27,44 @@ On 30.0° W the Abertis muxes broadcast dozens of FTA/BISS channels bundled insi
 [*]One OSCam‑EMU [B]A: rule per feed[/B] in /etc/tuxbox/config/oscam.dvbapi (backup kept)
 [*]Mirrors missing BISS keys between softcam.key and SoftCam.Key (oscam‑emu reads the uppercase file)
 [*]Generates missing astra‑sm stream blocks in /etc/astra/astra.conf
-[*]Writes /etc/init.d/astra + astra-sm.service: astra starts at every cold boot, streamrelay socket on port 8001 always up
+[*]Writes /etc/init.d/astra + astra-sm.service: astra starts at every cold boot (only when the image does not already manage astra)
 [*]lamedb fix [B]before[/B] Enigma2 starts (systemd ExecStartPre drop‑in) – no more lost c:00xxxx data PIDs after a rescan
 [*]"Ta9ti3" (picture cutting) fix: /etc/sysctl.d/99‑abertis.conf with 16 MB UDP socket buffers – no more packet loss on the streamproxy → astra hop
 [/LIST]
 
 [SIZE=4][B]What is new in v1.9.13[/B][/SIZE]
 [LIST]
-[*]The package is now a [B]standard Debian .deb[/B] – install with plain dpkg ‑i
-[*][B]One package for every receiver[/B]: it detects the architecture (uname ‑m) and deploys the matching binaries:
+[*][B]Both image families[/B]: DreamOS / Debian images (dpkg) install the [B].deb[/B]; OpenATV / OpenPLi / opkg images install the [B].ipk[/B] – the one‑line installer detects the package system automatically.
+[*][B]One package for every receiver architecture[/B]: it detects uname ‑m and deploys the matching binaries:
    ‑ aarch64/arm64: full toolchain (astra, t2mi_decap, spammer, abertis)
-   ‑ arm (32 bit) and mips: native abertis de‑encapsulator
+   ‑ arm (32 bit) and mips: static native abertis de‑encapsulator
 [*][B]Wrong‑architecture binaries are never deployed[/B]: on arm/mips your already‑installed binaries are kept untouched, only the abertis tool of that architecture is deployed (logged).
-[*]Installer pinned to v1.9.13, clean upgrade from the old .ipk versions
+[*][B]Images without OpenSSL 3 cannot receive a broken astra[/B]: the patched astra is linked against libcrypto.so.3. When the image lacks it (e.g. openATV 8.0.1 ships libcrypto.so.4/1.0.2), the library carried by the package is deployed into /usr/lib [B]only when missing[/B] and ldconfig is refreshed – if a needed library can neither be found nor shipped, our binary is not installed and [B]your working one stays[/B]. Every replaced file is kept once as *.orig.
+[*]The installer never reboots and never restarts Enigma2 – the plugin loads at the next Enigma2 start of your choice.
 [/LIST]
 
 [SIZE=4][B]Nothing is ever overwritten[/B][/SIZE]
-/etc/astra/astra.conf, /etc/astra/scripts/abertis, the OSCam files and your working softcam keys are never overwritten: only missing entries are appended, everything backed up first (.orig / .abetrisauto.bak). The Abertis keys are shipped as *.dist so fresh images descramble out of the box while existing receivers keep their keys.
+/etc/astra/astra.conf, /etc/astra/scripts/abertis, the OSCam files and your working softcam keys are never overwritten: only missing entries are appended, everything backed up first (.orig / .abetrisauto.bak / /root/abetris‑backup). The Abertis keys are shipped as *.dist so fresh images descramble out of the box while existing receivers keep their keys.
 
-[SIZE=4][B]Installation (one line, root shell)[/B][/SIZE]
+[SIZE=4][B]Installation (one line, root shell, both images)[/B][/SIZE]
 [CODE]wget https://raw.githubusercontent.com/prof-abdo/Abertis-Auto-Switcher-PRO/main/installer.sh -O - | /bin/sh[/CODE]
 
 Manual install:
-[CODE]cd /tmp
+[CODE]# DreamOS / Debian images (dpkg):
+cd /tmp
 wget -O abertis-pro.deb https://github.com/prof-abdo/Abertis-Auto-Switcher-PRO/releases/download/v1.9.13/enigma2-plugin-extensions-abertisautoswitcher_1.9.13_all.deb
-dpkg -i abertis-pro.deb[/CODE]
+dpkg -i abertis-pro.deb
+
+# OpenATV / OpenPLi / opkg images:
+cd /tmp
+wget -O abertis-pro.ipk https://github.com/prof-abdo/Abertis-Auto-Switcher-PRO/releases/download/v1.9.13/enigma2-plugin-extensions-abertisautoswitcher_1.9.13_all.ipk
+opkg install --force-reinstall --force-overwrite abertis-pro.ipk[/CODE]
 
 Menu: [B]Menu → Extensions → AbertisAutoSwitcher[/B] (manual "Run setup", auto‑sequence runs on every boot and every Ciefp URL zap).
 
 [SIZE=4][B]What you need[/B][/SIZE]
 [LIST]
-[*]A Debian‑based Enigma2 image (DreamOS 2.6 / OpenATV 8 / …)
+[*]An Enigma2 image with dpkg (DreamOS 2.6) or opkg (OpenATV 8 / OpenPLi)
 [*]A dish on 30.0° W and one free tuner (Hispasat 12583 V, T2‑MI multiplexed)
 [*]OSCam with oscam‑emu installed
 [*]The Ciefp streams/bouquets providing the /abertis/pid<n> URLs
@@ -72,9 +79,9 @@ Menu: [B]Menu → Extensions → AbertisAutoSwitcher[/B] (manual "Run setup", au
 [*][B]linuxsat-support[/B] – for the knowledge base
 [/LIST]
 
-[B]Source / support:[/B] [URL='https://github.com/prof-abdo/Abertis-Auto-Switcher-PRO']github.com/prof-abdo/Abertis-Auto-Switcher-PRO[/URL] – releases v1.9.13 (.deb); pull‑requests and test feedback from arm (32 bit) / mips receivers are very welcome.
+[B]Source / support:[/B] [URL='https://github.com/prof-abdo/Abertis-Auto-Switcher-PRO']github.com/prof-abdo/Abertis-Auto-Switcher-PRO[/URL] – release v1.9.13 (.deb for DreamOS, .ipk for OpenATV/OpenPLi); pull‑requests and test feedback from arm (32 bit) / mips receivers are very welcome.
 
-Tested and working on Dreambox Two 4K, DreamOS 2.6, Enigma2 5.x: all Abertis feeds auto‑configured (astra‑sm 0.2.88 patched t2mi payload PID 0x90), FTA + BISS + F1 learning phase, PID 8008 verified at 100% TS‑sync.
+Tested and working on Dreambox Two 4K under DreamOS 2.6 (dpkg) and openATV 8.0.1 / opkg with Python 3.14 (patched astra running with the shipped libcrypto.so.3): all Abertis feeds auto‑configured, FTA + BISS + F1 learning phase; PID 8008 verified at 100% TS‑sync.
 
 Enjoy! 🙂
 
@@ -85,4 +92,4 @@ Enjoy! 🙂
 1. Copy everything BETWEEN the [SPOILER] tags (not the tags themselves, and not this notes block) into the linuxsat-support editor.
 2. If the editor already provides a "Spoil" button, you can wrap the pasted content with it instead.
 3. Replace the [ATTACH]…[/ATTACH] placeholder: attach abetris_osd_1/2/3.png in the editor (Upload a File button) and insert each attachment where the placeholder stands.
-4. Suggested thread title: "Abertis Auto Switcher PRO v1.9.13 - all Abertis feeds on 30.0W fully automatic (DreamOS/Enigma2, .deb + multi-arch)"
+4. Suggested thread title: "Abertis Auto Switcher PRO v1.9.13 - all Abertis feeds on 30.0W fully automatic (Enigma2: DreamOS + OpenATV, .deb + .ipk, multi-arch)"
