@@ -1537,3 +1537,52 @@ class AstraInitProvisioningTests(unittest.TestCase):
         ok, msg, messages, _, _ = self._run_provision()
         self.assertFalse(ok)
         self.assertFalse(os.path.exists(self.init_path))
+
+
+class SanitizeAstraConfTests(unittest.TestCase):
+    """v1.9.16: '# comment' lines crash Lua astra (PANIC) - convert to '--'."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.conf = os.path.join(self.tmp, "astra.conf")
+        self.bak = os.path.join(self.tmp, "astra.conf.abertisauto.bak")
+
+    def test_converts_hash_comments_and_backs_up(self):
+        original = (
+            "# head comment\n"
+            "-- keep me\n"
+            "  # indented comment\n"
+            "make_channel({ name = \"x\" })\n")
+        with open(self.conf, "w") as f:
+            f.write(original)
+        with mock.patch.object(setup, "ASTRA_CONF", self.conf), \
+             mock.patch.object(setup, "ASTRA_CONF_BACKUP", self.bak):
+            count = setup.sanitize_astra_conf()
+        self.assertEqual(count, 2)
+        with open(self.conf) as f:
+            converted = f.read()
+        self.assertIn("-- head comment", converted)
+        self.assertIn("  -- indented comment", converted)
+        self.assertIn("-- keep me", converted)
+        self.assertIn("make_channel", converted)
+        self.assertFalse([l for l in converted.splitlines()
+                          if l.lstrip().startswith("#")])
+        with open(self.bak) as f:
+            self.assertEqual(f.read(), original)
+
+    def test_returns_zero_for_clean_config(self):
+        with open(self.conf, "w") as f:
+            f.write("-- clean\nmake_channel({})\n")
+        with mock.patch.object(setup, "ASTRA_CONF", self.conf), \
+             mock.patch.object(setup, "ASTRA_CONF_BACKUP", self.bak):
+            self.assertEqual(setup.sanitize_astra_conf(), 0)
+        self.assertFalse(os.path.exists(self.bak))
+        with open(self.conf) as f:
+            self.assertEqual(f.read(), "-- clean\nmake_channel({})\n")
+
+    def test_returns_zero_when_config_missing(self):
+        with mock.patch.object(setup, "ASTRA_CONF", self.conf), \
+             mock.patch.object(setup, "ASTRA_CONF_BACKUP", self.bak):
+            self.assertEqual(setup.sanitize_astra_conf(), 0)
+        self.assertFalse(os.path.exists(self.bak))

@@ -371,6 +371,56 @@ def ensure_astra_conf():
         return False
 
 
+def sanitize_astra_conf(config_path=None, backup_path=None):
+    """Convert shell-style '# comment' lines in astra.conf to Lua '--'.
+
+    The patched astra 0.2.88 dies with "PANIC: unprotected error in call
+    to Lua API" when astra.conf carries comment lines starting with '#':
+    Lua only accepts '--'.  Old releases and manual edits can leave such
+    lines on installed boxes.  One-time backup, idempotent, nothing else
+    touched.  Returns the number of converted lines.
+    """
+    config_path = config_path or ASTRA_CONF
+    backup_path = backup_path or ASTRA_CONF_BACKUP
+    if not os.path.exists(config_path):
+        return 0
+    try:
+        with open(config_path, "rb") as f:
+            original = f.read()
+    except Exception:
+        return 0
+    text = original.decode("latin-1", "replace")
+    out = []
+    fixed = 0
+    for line in text.splitlines(True):
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            head_ws = line[:len(line) - len(stripped)]
+            line = head_ws + "--" + stripped[1:]
+            fixed += 1
+        out.append(line)
+    if not fixed:
+        return 0
+    if not os.path.exists(backup_path):
+        try:
+            shutil.copy2(config_path, backup_path)
+        except Exception:
+            pass
+    try:
+        with open(config_path, "wb") as f:
+            f.write("".join(out).encode("latin-1", "replace"))
+        import stat as _stat
+        try:
+            os.chmod(config_path, _stat.S_IMODE(os.stat(backup_path).st_mode
+                                                ) if os.path.exists(
+                                                    backup_path) else 0o644)
+        except Exception:
+            pass
+    except Exception:
+        return 0
+    return fixed
+
+
 def _upper_service_ref(ref):
     """Uppercase the four hex fields of an Enigma2 service reference."""
     parts = (ref or "").split(":")
@@ -1469,8 +1519,13 @@ def run_full_setup(restart_configs=True):
         init_ok, init_msg = _ensure_astra_init([])
         logger.log(init_msg)
         ensure_astra_conf()
+        fixed_comments = sanitize_astra_conf()
         astra_ok, astra_changed, astra_message = ensure_astra_streams(feeds=feeds)
         logger.log(astra_message)
+        if fixed_comments:
+            logger.log("astra.conf: converted %d shell-style comment(s) "
+                       "to Lua (--)" % fixed_comments)
+            astra_changed = True
         ref_ok, ref_changed, ref_message = ensure_astra_feed_refs()
         logger.log(ref_message)
         if ref_changed:
