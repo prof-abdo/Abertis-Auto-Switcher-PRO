@@ -431,6 +431,34 @@ def _parse_pat(data, sid):
     return None
 
 
+def _parse_pat_any_program(data):
+    """PMT PID of the first real program in the PAT (single-program fallback).
+
+    The piped T2-MI de-encapsulation of astra rebuilds the output stream
+    with one program whose service id has nothing to do with the ciefp
+    reference (measured: PAT of /abertis/pid8008 lists sid 201/0xC9 while
+    the reference says 9C43).  The frontend plays that one program
+    regardless of the service id, so the firmware discovers the PAT/PMT
+    of the astra output itself - the plugin only needs the pmt pid for
+    the reference.  Returns None when the PAT has no real program.
+    """
+    for sec in _ts_sections(data, 0):
+        if not sec or _b(sec[0]) != 0x00:
+            continue
+        slen = ((_b(sec[1]) & 0x0F) << 8) | _b(sec[2])
+        if slen > 1020:
+            continue
+        body = sec[8:8 + slen - 4]
+        i = 0
+        while i + 4 <= len(body):
+            prog = (_b(body[i]) << 8) | _b(body[i + 1])
+            pmt = ((_b(body[i + 2]) & 0x1F) << 8) | _b(body[i + 3])
+            if prog != 0:
+                return pmt
+            i += 4
+    return None
+
+
 _VIDEO_TYPES = (0x02, 0x10, 0x1B, 0x1E, 0x24, 0x25, 0x26, 0x27, 0x51)
 _AUDIO_TYPES = {
     0x03: lamedb_fix.CACHE_MPEG_AUDIO,
@@ -500,6 +528,12 @@ def _streamrelay_pids(data, ref):
         return None, None, "cannot parse reference"
     sid, ns, tsid, onid, path, name = info
     pmtpid = _parse_pat(data, sid)
+    if pmtpid is None:
+        # v1.9.20: ciefp UHD references carry a synthetic service id the
+        # astra output never regenerates (its piped T2-MI stream is
+        # rebuilt with one program).  Fall back to that single program:
+        # the frontend discovers the PAT/PMT of the astra output itself.
+        pmtpid = _parse_pat_any_program(data)
     if pmtpid is None:
         return None, None, "service %04x not in PAT" % sid
     vpid, apid, acache, pcrpid = _parse_pmt(data, pmtpid)

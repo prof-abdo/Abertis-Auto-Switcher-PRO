@@ -531,6 +531,33 @@ class StreamrelayPmtTests(unittest.TestCase):
         self.assertEqual(pmtpid, 0x012C)
         set_sr.assert_not_called()
 
+    def test_streamrelay_accepts_the_single_program_pat(self):
+        """v1.9.20: the astra T2-MI output is rebuilt with one program.
+
+        Measured on Dream One: /abertis/pid8008 carries PAT (sid 201 ->
+        PMT 0x64) while the ciefp reference says 9C43 - the frontend
+        plays that one program regardless of the service id.
+        """
+        ref = ("1:0:1:9C43:3235:1F48:0:0:0:0:"
+               "http%3a//0.0.0.0%3a9999/abertis/pid8008:La 1 UHD [8008]")
+        data = (_ts_packet(0, _pat_section(201, 0x64))
+                + _ts_packet(0x64, _pmt_section(0x1000, [(0x02, 0x1000),
+                                                         (0x03, 0x1001)])))
+        need, pmtpid, message = self._call(autostart._streamrelay_pids,
+                                           data, ref)
+        self.assertIs(need, False)
+        self.assertEqual(pmtpid, 0x64)
+        self.assertIn("vpid=4096", message)
+        self.assertIn("apid=4097", message)
+
+    def test_parse_pat_any_program_skips_the_zero_program(self):
+        data = (_ts_packet(0, _pat_section(0, 0x10))
+                + _ts_packet(0, _pat_section(201, 0x64))
+                + _ts_packet(0x64, _pmt_section(0x1000, [(0x02, 0x1000)]))
+                )
+        self.assertEqual(autostart._parse_pat_any_program(data), 0x64)
+        self.assertIsNone(autostart._parse_pat_any_program(b"\x00" * 400))
+
     def test_play_url_keeps_the_ciefp_reference_with_the_data_pid(self):
         auto = autostart._Auto2026.__new__(autostart._Auto2026)
         auto.busy = False
