@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """Abertis Auto Pro - UI and autostart registration.
 
 The engine itself lives in ``autostart.py`` / ``lamedb_fix.py`` /
@@ -20,7 +20,7 @@ from . import logger, setup, lamedb_fix, autostart
 LAMEDB = "/etc/enigma2/lamedb"
 BACKUP_DIR = "/root/abetris-backup"
 PKG = "enigma2-plugin-extensions-abertisautoswitcher"
-VERSION = "1.9.20"
+VERSION = "1.9.21"
 AUTHOR = "Kingcs / Prof-abdo"
 THANKS = "mouadhada (AbetrisFlagSwitch) and Saber Hisham SH"
 
@@ -100,14 +100,14 @@ class AbertisAutoSwitcherScreen(Screen):
         labels = {
             "brand": "ABERTIS AUTO SWITCHER PRO",
             "tagline": "Professional Abertis / Ciefp Stream Engine  |  DreamOS 2.6",
-            "status": "System Ready — Automation Active",
+            "status": "System Ready â€” Automation Active",
             "log": "Select any Abertis feed from the bouquet.  Automatic F1 -> F5 playback handles the rest.",
             "btn_red": "Exit",
             "btn_green": "Check update",
             "btn_yellow": "Refresh status",
             "btn_blue": "Diagnostics",
             "btn_ok": "OK  About",
-            "footer": "Abertis Auto Switcher PRO  v1.9.20  |  Kingcs / Prof-abdo  |  mouadhada + Saber Hisham SH",
+            "footer": "Abertis Auto Switcher PRO  v1.9.21  |  Kingcs / Prof-abdo  |  mouadhada + Saber Hisham SH",
         }
         for name, text in labels.items():
             self[name] = Label(_to_str(text))

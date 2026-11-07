@@ -1,75 +1,15 @@
 {
   ".opencode/opencode.json": {
-    "mtime": 1792609619.3717022,
-    "seen": 1792610222.1364028,
-    "ast_hash": "f2ae21510d07365eb2bce8159272c7a0",
-    "semantic_hash": "f2ae21510d07365eb2bce8159272c7a0"
+    "mtime": 1792698897.4757621,
+    "seen": 1792886784.242819,
+    "ast_hash": "99914b932bd37a50b983c5e7c90ae93b",
+    "semantic_hash": "99914b932bd37a50b983c5e7c90ae93b"
   },
   ".opencode/plugins/graphify.js": {
-    "mtime": 1792609619.3702774,
-    "seen": 1792610222.1364074,
-    "ast_hash": "b33d000860642c6f4907a877e0387a21",
-    "semantic_hash": "b33d000860642c6f4907a877e0387a21"
-  },
-  "AbetrisAuto/DEBIAN/postinst": {
-    "mtime": 1792587355.2053795,
-    "seen": 1792610222.1364095,
-    "ast_hash": "693484f0667357f9e5a9579faac7fb2d",
-    "semantic_hash": "693484f0667357f9e5a9579faac7fb2d"
-  },
-  "AbetrisAuto/DEBIAN/prerm": {
-    "mtime": 1792561308.9061856,
-    "seen": 1792610222.1364107,
-    "ast_hash": "3b1537831fe12d81fb012d568f45cbce",
-    "semantic_hash": "3b1537831fe12d81fb012d568f45cbce"
-  },
-  "AbetrisAuto/etc/astra/scripts/abertis": {
-    "mtime": 1792598556.385807,
-    "seen": 1792610222.1364117,
-    "ast_hash": "edbdc15bc21c629d9bf3240b14da0d5a",
-    "semantic_hash": "edbdc15bc21c629d9bf3240b14da0d5a"
-  },
-  "AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/__init__.py": {
-    "mtime": 1792537405.8909388,
-    "seen": 1792610222.1364126,
-    "ast_hash": "83511d7820fc2465f8d069ec1e1305dc",
-    "semantic_hash": "83511d7820fc2465f8d069ec1e1305dc"
-  },
-  "AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/autostart.py": {
-    "mtime": 1792608099.4099195,
-    "seen": 1792610222.136414,
-    "ast_hash": "3921ccda95758fc59b53b4d15f80a9e4",
-    "semantic_hash": "3921ccda95758fc59b53b4d15f80a9e4"
-  },
-  "AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/lamedb_fix.py": {
-    "mtime": 1792607635.9838314,
-    "seen": 1792610222.136415,
-    "ast_hash": "5c63470e5622c6f8fd56afb15bc0d9af",
-    "semantic_hash": "5c63470e5622c6f8fd56afb15bc0d9af"
-  },
-  "AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/logger.py": {
-    "mtime": 1792537407.5667934,
-    "seen": 1792610222.136416,
-    "ast_hash": "b80861eab8acc47a7878e97bcfda0d76",
-    "semantic_hash": "b80861eab8acc47a7878e97bcfda0d76"
-  },
-  "AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/plugin.py": {
-    "mtime": 1792587708.7269454,
-    "seen": 1792610222.1364167,
-    "ast_hash": "27f117e704a6d42a104347baaf6c8531",
-    "semantic_hash": "27f117e704a6d42a104347baaf6c8531"
-  },
-  "AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/prestart_fix.py": {
-    "mtime": 1792561223.4635644,
-    "seen": 1792610222.1364176,
-    "ast_hash": "a6f974058ba25dea6923e7f7555024dd",
-    "semantic_hash": "a6f974058ba25dea6923e7f7555024dd"
-  },
-  "AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/setup.py": {
-    "mtime": 1792598590.0976393,
-    "seen": 1792610222.1364264,
-    "ast_hash": "36afcdfadfe3f6d21292f8d3dce45273",
-    "semantic_hash": "36afcdfadfe3f6d21292f8d3dce45273"
+    "mtime": 1792698897.4720848,
+    "seen": 1792886784.242824,
+    "ast_hash": "d7e5fcae24d0febea00a1554288bcf83",
+    "semantic_hash": "d7e5fcae24d0febea00a1554288bcf83"
   },
   "astra-sm_2.91_aarch64/scripts-examples/http/file_server.lua": {
     "mtime": 1630874580.0,
@@ -90,10 +30,10 @@
     "semantic_hash": "86dc35f129c3c5cb72f8c2302f55e9ef"
   },
   "build_ipk.py": {
-    "mtime": 1792598601.0686693,
-    "seen": 1792610222.13643,
-    "ast_hash": "37b91580a589eca5fccf03cefca3b037",
-    "semantic_hash": "37b91580a589eca5fccf03cefca3b037"
+    "mtime": 1792805602.218665,
+    "seen": 1792886784.2428539,
+    "ast_hash": "266be9fabcce311ed3c30dd389ff44c8",
+    "semantic_hash": "266be9fabcce311ed3c30dd389ff44c8"
   },
   "extracted/AbetrisFlagSwitch/__init__.py": {
     "mtime": 1763925420.0,
@@ -107,10 +47,136 @@
     "ast_hash": "0f144c5457ffbbf73f8f43cf3d32cb0e",
     "semantic_hash": "0f144c5457ffbbf73f8f43cf3d32cb0e"
   },
-  "AbetrisAuto/README.md": {
-    "mtime": 1792604192.6702385,
-    "seen": 1792610222.136433,
-    "ast_hash": "519b13f555fd6e983c1de7e31cc21ea7",
-    "semantic_hash": "519b13f555fd6e983c1de7e31cc21ea7"
+  "AbertisAutoSwitcher/DEBIAN/postinst": {
+    "mtime": 1792805588.8934143,
+    "seen": 1792886784.2428265,
+    "ast_hash": "c9ed8937205c6fde3dad303c7709d716",
+    "semantic_hash": "c9ed8937205c6fde3dad303c7709d716"
+  },
+  "AbertisAutoSwitcher/DEBIAN/prerm": {
+    "mtime": 1792561308.9061856,
+    "seen": 1792886784.2428284,
+    "ast_hash": "3b1537831fe12d81fb012d568f45cbce",
+    "semantic_hash": "3b1537831fe12d81fb012d568f45cbce"
+  },
+  "AbertisAutoSwitcher/etc/astra/scripts/abertis": {
+    "mtime": 1792598556.385807,
+    "seen": 1792886784.24283,
+    "ast_hash": "edbdc15bc21c629d9bf3240b14da0d5a",
+    "semantic_hash": "edbdc15bc21c629d9bf3240b14da0d5a"
+  },
+  "AbertisAutoSwitcher/etc/astra/scripts/abertis.c": {
+    "mtime": 1792723215.0523446,
+    "seen": 1792886784.242832,
+    "ast_hash": "79211f0e18cedae03aae68934a232346",
+    "semantic_hash": "79211f0e18cedae03aae68934a232346"
+  },
+  "AbertisAutoSwitcher/etc/init.d/astra": {
+    "mtime": 1792804687.924599,
+    "seen": 1792886784.242833,
+    "ast_hash": "f705dd532f86e71f31e80762cb96725e",
+    "semantic_hash": "f705dd532f86e71f31e80762cb96725e"
+  },
+  "AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/__init__.py": {
+    "mtime": 1792723417.3726473,
+    "seen": 1792886784.242834,
+    "ast_hash": "8c6b8195b0578b010a10a86af596dfad",
+    "semantic_hash": "8c6b8195b0578b010a10a86af596dfad"
+  },
+  "AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/autostart.py": {
+    "mtime": 1792804687.84023,
+    "seen": 1792886784.2428358,
+    "ast_hash": "811a33bbb0c69f650e922fef45a96ce1",
+    "semantic_hash": "811a33bbb0c69f650e922fef45a96ce1"
+  },
+  "AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/lamedb_fix.py": {
+    "mtime": 1792723417.3763354,
+    "seen": 1792886784.242837,
+    "ast_hash": "b943cd0a501566845bab75cb505bf3a1",
+    "semantic_hash": "b943cd0a501566845bab75cb505bf3a1"
+  },
+  "AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/logger.py": {
+    "mtime": 1792537407.5667934,
+    "seen": 1792886784.2428384,
+    "ast_hash": "b80861eab8acc47a7878e97bcfda0d76",
+    "semantic_hash": "b80861eab8acc47a7878e97bcfda0d76"
+  },
+  "AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/plugin.py": {
+    "mtime": 1792805092.1371577,
+    "seen": 1792886784.2428396,
+    "ast_hash": "ca499e2b4e680b5a1bbb34862449bbcf",
+    "semantic_hash": "ca499e2b4e680b5a1bbb34862449bbcf"
+  },
+  "AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/prestart_fix.py": {
+    "mtime": 1792561223.4635644,
+    "seen": 1792886784.2428408,
+    "ast_hash": "a6f974058ba25dea6923e7f7555024dd",
+    "semantic_hash": "a6f974058ba25dea6923e7f7555024dd"
+  },
+  "AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/setup.py": {
+    "mtime": 1792807923.9571092,
+    "seen": 1792886784.2428422,
+    "ast_hash": "13e748bd37301e7103a6ffd9997a254b",
+    "semantic_hash": "13e748bd37301e7103a6ffd9997a254b"
+  },
+  "build_deb.py": {
+    "mtime": 1792807944.1457236,
+    "seen": 1792886784.2428524,
+    "ast_hash": "d4f0ed5082b11974877e99414d908a73",
+    "semantic_hash": "d4f0ed5082b11974877e99414d908a73"
+  },
+  "installer.sh": {
+    "mtime": 1792807999.0448668,
+    "seen": 1792886784.2428586,
+    "ast_hash": "1e43a025a1a7b66a98ceede3aff0bae0",
+    "semantic_hash": "1e43a025a1a7b66a98ceede3aff0bae0"
+  },
+  "tests/test_abertis_auto.py": {
+    "mtime": 1792804687.5879354,
+    "seen": 1792886784.2428606,
+    "ast_hash": "a18b902bdda1821c68e91ff8151f5ce5",
+    "semantic_hash": "a18b902bdda1821c68e91ff8151f5ce5"
+  },
+  "usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/abertis_python.py": {
+    "mtime": 1792693211.1998458,
+    "seen": 1792886784.2428617,
+    "ast_hash": "e87204b6c0a4ba635813d8c398a09dc1",
+    "semantic_hash": "e87204b6c0a4ba635813d8c398a09dc1"
+  },
+  "verify_ipk.py": {
+    "mtime": 1792805667.3127513,
+    "seen": 1792886784.2428632,
+    "ast_hash": "dbc03247a237e5cd3ef1b75102133738",
+    "semantic_hash": "dbc03247a237e5cd3ef1b75102133738"
+  },
+  ".agents/rules/graphify.md": {
+    "mtime": 1792886618.006045,
+    "seen": 1792886784.2428644,
+    "ast_hash": "a0e4d192b9e2e17256124dbfc8e24e6a",
+    "semantic_hash": "a0e4d192b9e2e17256124dbfc8e24e6a"
+  },
+  ".agents/workflows/graphify.md": {
+    "mtime": 1792886618.0083866,
+    "seen": 1792886784.2428656,
+    "ast_hash": "a831cf3669f1e6ab85d8a80ebe655f99",
+    "semantic_hash": "a831cf3669f1e6ab85d8a80ebe655f99"
+  },
+  ".superpowers/sdd/2026-10-21-abertis-2026-a-rule/progress.md": {
+    "mtime": 1792617511.3958948,
+    "seen": 1792886784.2428668,
+    "ast_hash": "2adb0f0163a02f4e86aec623df758e19",
+    "semantic_hash": "2adb0f0163a02f4e86aec623df758e19"
+  },
+  "AbertisAutoSwitcher/README.md": {
+    "mtime": 1792805621.3266077,
+    "seen": 1792886784.242868,
+    "ast_hash": "244e782db85d0fe4ee80e7da15a1ddf5",
+    "semantic_hash": "244e782db85d0fe4ee80e7da15a1ddf5"
+  },
+  "docs/superpowers/plans/2026-10-21-abertis-2026-a-rule.md": {
+    "mtime": 1792616320.9611413,
+    "seen": 1792886784.2428691,
+    "ast_hash": "d976a7a14ec91295699d820aa6bcd0f7",
+    "semantic_hash": "d976a7a14ec91295699d820aa6bcd0f7"
   }
 }

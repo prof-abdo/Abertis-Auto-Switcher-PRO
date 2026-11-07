@@ -254,6 +254,13 @@ def ensure_softcam_key():
         return False
 
 
+def _key_line_str(line):
+    """Text of one key line, py2/py3 safe (bytes on py2)."""
+    if isinstance(line, bytes):
+        return line.decode("utf-8", "replace")
+    return line
+
+
 def ensure_softcam_key_upper():
     """Mirror the Abertis BISS keys into the uppercase SoftCam.Key.
 
@@ -264,29 +271,52 @@ def ensure_softcam_key_upper():
 
     Only missing lines are appended, the user file is backed up first and
     nothing is ever removed or rewritten.  Returns ``(ok, changed)``.
+
+    v1.9.21: the whole function works on raw bytes.  The key files hold
+    iso-8859 lines of other providers (a Hotbird line with a raw 0xc7
+    byte crashed the old ``content.encode("utf-8")`` on DreamOS, where
+    the default codec is utf-8, and the merge never happened - the 8008
+    feed stayed encrypted).  The original bytes are preserved and only
+    Abertis lines are appended.
     """
-    if not os.path.exists(SOFTCAM_KEY_UPPER):
-        return False, False
-    existing = _read_text(SOFTCAM_KEY_UPPER)
-    if existing is None:
+
+    def raw(path):
+        """Read the file as bytes; None when it cannot be read."""
+        try:
+            with open(path, "rb") as f:
+                return f.read()
+        except Exception:
+            return None
+
+    up_bytes = raw(SOFTCAM_KEY_UPPER)
+    if up_bytes is None:
+        if not os.path.exists(SOFTCAM_KEY_UPPER):
+            return False, False
         logger.log("SoftCam.Key exists but cannot be read - keeping it untouched")
         return False, False
-    source = _read_text(SOFTCAM_KEY) if os.path.exists(SOFTCAM_KEY) else None
-    if not source:
+    low_bytes = raw(SOFTCAM_KEY) if os.path.exists(SOFTCAM_KEY) else None
+    if not low_bytes:
         return False, False
     have = set()
-    for line in existing.splitlines():
-        n = _normalize_key_line(line)
+    for line in up_bytes.splitlines():
+        n = _normalize_key_line(_key_line_str(line))
         if n:
             have.add(n)
+    abertis_norm = set()
+    for line in ABERTIS_KEYS.splitlines():
+        n = _normalize_key_line(_key_line_str(line))
+        if n:
+            abertis_norm.add(n)
     wanted = []
-    for line in source.splitlines():
-        if "ABERTIS" not in line.upper():
+    wanted_have = set()
+    for line in low_bytes.splitlines():
+        text = _key_line_str(line)
+        n = _normalize_key_line(text)
+        if not n or n in have or n in wanted_have:
             continue
-        n = _normalize_key_line(line)
-        if not n or n in have or n in wanted:
-            continue
-        wanted.append(line.strip())
+        if "ABERTIS" in text.upper() or n in abertis_norm:
+            wanted.append(line)
+            wanted_have.add(n)
     if not wanted:
         logger.log("SoftCam.Key already contains all Abertis keys")
         return True, False
@@ -294,11 +324,11 @@ def ensure_softcam_key_upper():
         backup = SOFTCAM_KEY_UPPER + ".abetrisauto.bak"
         if not os.path.exists(backup):
             shutil.copy2(SOFTCAM_KEY_UPPER, backup)
-        content = existing
-        if content and not content.endswith("\n"):
-            content += "\n"
-        content += "\n".join(wanted) + "\n"
-        _atomic_write(SOFTCAM_KEY_UPPER, content.encode("utf-8"), 0o644)
+        out = bytearray(up_bytes)
+        if out and out[-1] != 0x0A:
+            out.append(0x0A)
+        out += b"\n".join(wanted) + b"\n"
+        _atomic_write(SOFTCAM_KEY_UPPER, bytes(out), 0o644)
         logger.log("SoftCam.Key: merged %d Abertis keys" % len(wanted))
         return True, True
     except Exception as e:

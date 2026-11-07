@@ -1,131 +1,160 @@
-# Graph Report - AbetrisFlagSwitch  (2026-10-21)
+# Graph Report - AbetrisFlagSwitch  (2026-10-25)
 
 ## Corpus Check
-- Corpus is ~10,370 words - fits in a single context window. You may not need a graph.
+- Corpus is ~30,672 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 279 nodes · 455 edges · 22 communities (15 shown, 7 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.85)
+- 482 nodes · 809 edges · 32 communities (23 shown, 9 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 18 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
-- Token-usage caveat: the semantic extraction agent did not expose usage counts; 0/0 are placeholders, not measured totals.
 
 ## Community Hubs (Navigation)
-- 2026 Automation State Machine
-- Abertis System Overview
-- TS Parsing and Webif Utilities
-- lamedb Rules and Reload
-- Plugin Startup and Services
-- 2026 PID and Service Rules
-- Astra T2-MI Packaging
-- Plugin Control UI
-- Legacy Flag-Switch UI
-- Abertis Stream Tool
-- Oscam and BISS Acquisition
-- IPK Builder
-- Graphify OpenCode Hook
-- Package Postinstall
-- Package Removal Script
-- Plugin Menu Actions
-- Plugin Logging
-- Setup Automation
+- Feed Automation State Machine
+- Abertis Feed Catalog & A-Rules
+- Lamedb Rules & Mode Switching
+- Automated Switching Test Suite
+- Feed Catalog & TS Test Harness
+- Stream Relay & Webif TS Parsing
+- Plugin Logging & UI Setup
+- Native C De-encapsulator
+- OSCam DVBAPI Rule Installer Tests
+- Enigma2 UI Skin & Widget Tests
+- Abertis Architecture & Concepts
+- Legacy Flag Screen UI
+- Rescanned 8008 Feed Unit Tests
+- Lamedb Rule & Boot Fix Tests
+- Rescanned Feed Runtime Tests
+- Debian Package (.deb) Builder
+- IPK Package Builder
+- Automated Shell Installer
+- Graphify Plugin Hook
+- Astra Stream Script
+- SDD Plan & Constraints
+- Astra Daemon Control Service
+- Graphify Agent Guidelines
+- Debian Postinstall Script
+- Debian Pre-removal Script
+- Streamrelay Channel Rules
 
 ## God Nodes (most connected - your core abstractions)
-1. `_Auto2026` - 34 edges
-2. `log()` - 15 edges
-3. `AbetrisAutoScreen` - 11 edges
-4. `Abertis Auto v1.2` - 11 edges
-5. `apply()` - 9 edges
-6. `run_full_setup()` - 9 edges
-7. `set_streamrelay_service()` - 8 edges
-8. `Automatic F1-to-F5 streamrelay switching state machine` - 8 edges
-9. `_is_url()` - 7 edges
-10. `_oscam_found()` - 7 edges
+1. `_Auto2026` - 41 edges
+2. `log()` - 20 edges
+3. `run_full_setup()` - 20 edges
+4. `autostart()` - 15 edges
+5. `AutomationRobustnessTests` - 13 edges
+6. `UiSkinTests` - 13 edges
+7. `F5OnlyAutomationTests` - 12 edges
+8. `AllFeedAutomationTests` - 11 edges
+9. `_read_lines()` - 10 edges
+10. `AbertisAutoSwitcherScreen` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `install_rule()` --indirect_call--> `ensure_oscam_dvbapi_a_rule()`  [INFERRED]
+  tests/test_abertis_auto.py → AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/setup.py
+- `install_rules()` --indirect_call--> `ensure_oscam_dvbapi_a_rules()`  [INFERRED]
+  tests/test_abertis_auto.py → AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/setup.py
+- `PID 2026 F5 Automation Plan` --references--> `SDD Implementation Ledger`  [EXTRACTED]
+  docs/superpowers/plans/2026-10-21-abertis-2026-a-rule.md → .superpowers/sdd/2026-10-21-abertis-2026-a-rule/progress.md
 - `_webif_zap()` --calls--> `log()`  [EXTRACTED]
-  AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/autostart.py → AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/logger.py
-- `_streamrelay_pids()` --calls--> `set_streamrelay_service()`  [EXTRACTED]
-  AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/autostart.py → AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/lamedb_fix.py
-- `reload_edvbdb()` --calls--> `log()`  [EXTRACTED]
-  AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/lamedb_fix.py → AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/logger.py
-- `run_full_setup()` --calls--> `fix_all()`  [EXTRACTED]
-  AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/setup.py → AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/lamedb_fix.py
-- `_run()` --calls--> `log()`  [EXTRACTED]
-  AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/autostart.py → AbetrisAuto/usr/lib/enigma2/python/Plugins/Extensions/AbetrisAuto/logger.py
+  AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/autostart.py → AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/logger.py
+- `sessionstart()` --calls--> `log()`  [EXTRACTED]
+  AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/autostart.py → AbertisAutoSwitcher/usr/lib/enigma2/python/Plugins/Extensions/AbertisAutoSwitcher/logger.py
 
 ## Import Cycles
 - None detected.
 
 ## Hyperedges (group relationships)
-- **Abertis Services Managed by the Prestart Fix** — abetrisauto_readme_prestart_fix_py, abetrisauto_readme_service_8001, abetrisauto_readme_service_2026, abetrisauto_readme_service_2050 [EXTRACTED 1.00]
-- **Automatic F1-to-F5 Playback Sequence** — abetrisauto_readme_automatic_switching_sequence, abetrisauto_readme_sequence_step_1_feed_f1, abetrisauto_readme_sequence_step_2_zap_feed, abetrisauto_readme_sequence_step_3_stop_feed, abetrisauto_readme_sequence_step_4_restore_f5, abetrisauto_readme_sequence_step_5_read_astra_pmt, abetrisauto_readme_sequence_step_6_zap_streamrelay [EXTRACTED 1.00]
-- **One-Time Manual Prerequisites** — abetrisauto_readme_manual_prerequisites, abetrisauto_readme_astra_sm, abetrisauto_readme_astra_conf, abetrisauto_readme_softcam_key, abetrisauto_readme_oscam_dvbapi_streamrelay_config, abetrisauto_readme_abertis_channel_list_provider [EXTRACTED 1.00]
+- **Abertis Switching Pipeline Flow** — abertisautoswitcher_readme_abertis_auto_switcher_pro, abertisautoswitcher_readme_f1_learning_phase, abertisautoswitcher_readme_f5_playback_phase [EXTRACTED 1.00]
 
-## Communities (22 total, 7 thin omitted)
+## Communities (32 total, 9 thin omitted)
 
-### Community 0 - "2026 Automation State Machine"
-Cohesion: 0.10
-Nodes (14): _Auto2026, _info_playing(), _is_url(), Key of a service reference: only the url part. The plugin zaps the channel with…, Fast path. Polling remains the reliable fallback., Reload the service list without freezing the user interface. The webif…, Stop the feed playback (only used to release the timeshift). Playing a DVB…, All feeds back to F5 (cached pids) and reload. In F5 the streamserver (astra's… (+6 more)
+### Community 0 - "Feed Automation State Machine"
+Cohesion: 0.06
+Nodes (32): _Auto2026, _is_url(), _parse_ref(), object, Zap a channel using a background thread (no deadlock)., Play a service through the navigation (main thread only)., True for any Ciefp Abertis URL (``/abertis/pid<number>``)., Return the PID when this URL is on the no-signal skip list. (+24 more)
 
-### Community 1 - "Abertis System Overview"
+### Community 1 - "Abertis Feed Catalog & A-Rules"
+Cohesion: 0.06
+Nodes (63): _run(), build_a_rules(), get_all_feeds(), Return every "Abertis PID <n>" feed, sorted by PID., Build the A-rules of every Abertis feed (or the supplied list)., log(), apply_all_feeds(), astra_pids() (+55 more)
+
+### Community 2 - "Lamedb Rules & Mode Switching"
+Cohesion: 0.06
+Nodes (54): apply(), build_a_rule(), _build_provider(), ensure_cached_pids(), _feed_from_lines(), fix_all(), fix_disk(), _fix_name() (+46 more)
+
+### Community 3 - "Automated Switching Test Suite"
+Cohesion: 0.06
+Nodes (11): autostart(), AllFeedAutomationTests, AutomationRobustnessTests, _DeadThread, F5OnlyAutomationTests, _FakeTimer, object, The learning phase plays the feed with the real PAT/PMT. (+3 more)
+
+### Community 4 - "Feed Catalog & TS Test Harness"
 Cohesion: 0.07
-Nodes (40): Abertis Auto v1.2, Abertis channel list in lamedb with provider ABERTIS, AbetrisFlagSwitch, Working /etc/astra/astra.conf, Astra output as a normal single-program transport stream, astra-sm prerequisite, Automatic F1-to-F5 streamrelay switching state machine, autostart.py (+32 more)
+Nodes (13): _abertis_ts(), AllFeedCatalogTests, AllOscamRulesInstallerTests, AstraConfigGeneratorTests, install_rules(), OscamRestartTests, _pat_section(), _pmt_section() (+5 more)
 
-### Community 2 - "TS Parsing and Webif Utilities"
-Cohesion: 0.07
-Nodes (34): _b(), _has_cw(), _oscam_cw_cached(), _oscam_found(), _oscam_path(), _oscam_size(), _parse_pat(), _parse_pmt() (+26 more)
+### Community 5 - "Stream Relay & Webif TS Parsing"
+Cohesion: 0.08
+Nodes (32): _b(), _fetch_stream(), _has_cw(), _info_playing(), _oscam_cw_seen(), _oscam_path(), _oscam_size(), _parse_pat() (+24 more)
 
-### Community 3 - "lamedb Rules and Reload"
-Cohesion: 0.09
-Nodes (34): apply(), _build_provider(), ensure_cached_pids(), fix_all(), fix_disk(), _fix_name(), get_feed_ref(), _parse_sid_line() (+26 more)
+### Community 6 - "Plugin Logging & UI Setup"
+Cohesion: 0.13
+Nodes (13): AbertisAutoSwitcherScreen, _installed_version(), _local_packages(), main(), Plugins(), Screen, Re-apply the whole configuration (idempotent, backed up)., Compare the installed version with the packages kept on the box. (+5 more)
 
-### Community 4 - "Plugin Startup and Services"
-Cohesion: 0.12
-Nodes (27): autostart(), WHERE_SESSIONSTART variant: guarantees a real session/nav object., _run(), sessionstart(), log(), main(), Plugins(), sessionstart() (+19 more)
+### Community 7 - "Native C De-encapsulator"
+Cohesion: 0.26
+Nodes (14): main(), complete_split_pes(), fix_pes_timestamps(), flush_held(), get_ts(), handle_pcr(), keep_add(), keep_has() (+6 more)
 
-### Community 5 - "2026 PID and Service Rules"
-Cohesion: 0.11
-Nodes (22): Abertis PID 2026 feed, Astra log /var/log/messages; search for Abertis PID 2026, Cached PMT PID used in the F1 step, Abertis feed data PID, F1 feed state, /etc/enigma2/lamedb, /etc/enigma2/lamedb.2026_auto.bak, state before the first F1 step, /etc/enigma2/lamedb.abertis.bak, original lamedb backup created once (+14 more)
+### Community 8 - "OSCam DVBAPI Rule Installer Tests"
+Cohesion: 0.16
+Nodes (3): install_rule(), OscamRuleInstallerTests, OscamSetupHardeningTests
 
-### Community 6 - "Astra T2-MI Packaging"
-Cohesion: 0.18
-Nodes (11): Abertis T2-MI de-encapsulator at /etc/astra/scripts/abertis, armhf Abertis binary, Astra streamserver input, Keep an existing aarch64 binary; install the bundled binary when the tool is missing or is an armhf binary, Bundled aarch64 binary abertis.aarch64, Clear transport stream of the channel, DEBIAN control, postinst, and prerm, enigma2-plugin-extensions-abertisauto_1.2_all.ipk (+3 more)
+### Community 10 - "Abertis Architecture & Concepts"
+Cohesion: 0.25
+Nodes (9): Abertis Auto Switcher PRO, Astra T2-MI De-encapsulator, F1 Learning Phase, F5 Playback Phase, Feed Reference Overrides, SoftCam Key Mirroring, OSCam-EMU A-Rule, Outer PMT PID Derivation (+1 more)
 
-### Community 8 - "Legacy Flag-Switch UI"
+### Community 11 - "Legacy Flag Screen UI"
 Cohesion: 0.39
 Nodes (6): AbetrisFlagScreen, log(), main(), Plugins(), Screen, reload_http()
 
-### Community 9 - "Abertis Stream Tool"
+### Community 15 - "Debian Package (.deb) Builder"
+Cohesion: 0.52
+Nodes (6): _ar_member(), _build_control_tar(), _build_data_tar(), _control_version(), _gather_data_entries(), main()
+
+### Community 16 - "IPK Package Builder"
+Cohesion: 0.53
+Nodes (5): _ar_member(), _control_version(), main(), Read the Version: field of DEBIAN/control., _tar_gz()
+
+### Community 17 - "Automated Shell Installer"
+Cohesion: 0.53
+Nodes (4): die(), fetch(), say(), installer.sh script
+
+### Community 18 - "Graphify Plugin Hook"
+Cohesion: 0.47
+Nodes (5): hasGraph(), location, IMPORTANT: keep the reminder string free of backticks and $(...) constructs., server(), setup()
+
+### Community 19 - "Astra Stream Script"
 Cohesion: 0.60
-Nodes (4): _b(), main(), Return integer value of a byte, py2/py3 safe., _streams()
+Nodes (4): main(), _b(), Return integer value of a byte, py2/py3 safe., _streams()
 
-### Community 10 - "Oscam and BISS Acquisition"
-Cohesion: 0.40
-Nodes (5): BD2 feed transponder at 11222H, Current Abertis BISS key, oscam, CW evidence log /tmp/oscam.log; search for 0BD2 and found, Step 2: zap the feed at BD2 11222H so oscam requests the BISS key
-
-### Community 11 - "IPK Builder"
-Cohesion: 0.83
-Nodes (3): _ar_member(), main(), _tar_gz()
+### Community 20 - "SDD Plan & Constraints"
+Cohesion: 0.67
+Nodes (3): SDD Implementation Ledger, PID 2026 F5 Automation Plan, Rotor Safety Constraint
 
 ## Knowledge Gaps
-- **37 isolated node(s):** `Dreambox Two 4K`, `Enigma2 5.0`, `Enigma2 7.x`, `Hispasat 30W / 11222H`, `systemd ExecStartPre` (+32 more)
+- **8 isolated node(s):** `location`, `Streamrelay Channels`, `Astra T2-MI De-encapsulator`, `Feed Reference Overrides`, `SoftCam Key Mirroring` (+3 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `_Auto2026` connect `2026 Automation State Machine` to `TS Parsing and Webif Utilities`?**
-  _High betweenness centrality (0.104) - this node is a cross-community bridge._
-- **Why does `AbetrisAutoScreen` connect `Plugin Control UI` to `Plugin Startup and Services`?**
+- **Why does `_Auto2026` connect `Feed Automation State Machine` to `Stream Relay & Webif TS Parsing`?**
+  _High betweenness centrality (0.135) - this node is a cross-community bridge._
+- **Why does `autostart()` connect `Automated Switching Test Suite` to `Abertis Feed Catalog & A-Rules`, `Stream Relay & Webif TS Parsing`, `Plugin Logging & UI Setup`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `UiSkinTests` connect `Enigma2 UI Skin & Widget Tests` to `Feed Catalog & TS Test Harness`?**
   _High betweenness centrality (0.040) - this node is a cross-community bridge._
-- **Why does `Abertis Auto v1.2` connect `Abertis System Overview` to `Astra T2-MI Packaging`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **What connects `Dreambox Two 4K`, `Enigma2 5.0`, `Enigma2 7.x` to the rest of the system?**
-  _37 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `2026 Automation State Machine` be split into smaller, more focused modules?**
-  _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
-- **Should `Abertis System Overview` be split into smaller, more focused modules?**
-  _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
-- **Should `TS Parsing and Webif Utilities` be split into smaller, more focused modules?**
-  _Cohesion score 0.07307692307692308 - nodes in this community are weakly interconnected._
+- **Are the 12 inferred relationships involving `autostart()` (e.g. with `.refresh()` and `.test_2025_url_starts_with_f1_learning_and_its_own_feed()`) actually correct?**
+  _`autostart()` has 12 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `location`, `Streamrelay Channels`, `Astra T2-MI De-encapsulator` to the rest of the system?**
+  _8 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Feed Automation State Machine` be split into smaller, more focused modules?**
+  _Cohesion score 0.06010230179028133 - nodes in this community are weakly interconnected._
+- **Should `Abertis Feed Catalog & A-Rules` be split into smaller, more focused modules?**
+  _Cohesion score 0.06349206349206349 - nodes in this community are weakly interconnected._

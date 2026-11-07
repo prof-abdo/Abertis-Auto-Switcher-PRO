@@ -486,12 +486,15 @@ def _parse_pmt(data, pmtpid):
         vpid = -1
         apid = -1
         acache = lamedb_fix.CACHE_AC3_AUDIO
+        media = []
         i = 0
         while i + 4 < len(rest):
             st = _b(rest[i])
             epid = ((_b(rest[i + 1]) & 0x1F) << 8) | _b(rest[i + 2])
             esil = ((_b(rest[i + 3]) & 0x0F) << 8) | _b(rest[i + 4])
             info = rest[i + 5:i + 5 + esil]
+            if epid not in (0, 0x1FFF):
+                media.append(epid)
             if st in _VIDEO_TYPES and vpid < 0:
                 vpid = epid
             elif st in _AUDIO_TYPES and apid < 0:
@@ -504,6 +507,17 @@ def _parse_pmt(data, pmtpid):
                 if b"EAC3" in info:
                     acache = lamedb_fix.CACHE_EAC3_AUDIO
             i += 5 + esil
+        if vpid < 0 and media:
+            # v1.9.21: the piped T2-MI output of the astra UHD feed
+            # publishes the media as a single private PES stream
+            # (type 0x06 with a vendor descriptor) and no video stream
+            # type.  Measured: pmt 0x64 lists one entry, type 0x06 on
+            # pid 0x1000.  The frontend plays what flows anyway - accept
+            # the first real ES pid as the video pid.  If the same entry
+            # was taken above as a private PES audio, release it again.
+            vpid = media[0]
+            if apid == vpid:
+                apid = -1
         if vpid >= 0:
             return vpid, apid, acache, pcr
         if best[0] < 0:

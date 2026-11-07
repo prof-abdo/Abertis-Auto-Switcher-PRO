@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 #
 # Abertis Auto Switcher PRO - installer
 #
@@ -20,7 +20,7 @@
 set -e
 
 REPO="prof-abdo/Abertis-Auto-Switcher-PRO"
-RELEASE="v1.9.20"
+RELEASE="v1.9.21"
 PKG="enigma2-plugin-extensions-abertisautoswitcher"
 BACKUP_DIR="/root/abetris-backup"
 TMP="/tmp/abertisautoswitcher-install.$$"

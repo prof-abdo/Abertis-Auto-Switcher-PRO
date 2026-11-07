@@ -558,6 +558,47 @@ class StreamrelayPmtTests(unittest.TestCase):
         self.assertEqual(autostart._parse_pat_any_program(data), 0x64)
         self.assertIsNone(autostart._parse_pat_any_program(b"\x00" * 400))
 
+    def test_parse_pmt_accepts_the_private_pes_media_of_the_uhd_feed(self):
+        """v1.9.21: the astra UHD output PMT has no video stream type.
+
+        Measured on Dream Two (2026-11-08): the PMT of /abertis/pid8008
+        is rebuilt with ONE media entry - stream type 0x06 (private PES)
+        on pid 0x1000 followed by a vendor descriptor (7f 04 11 ...).
+        The old parser read it as audio only and failed with "no video
+        pid in PMT 0064".
+        """
+        pmt = (b"\x02\xb0\x18\x00\xc9\xd7\x00\x00"
+               b"\xff\xff\xf0\x00"
+               b"\x06\xf0\x00"
+               b"\xf0\x06"
+               b"\x7f\x04\x11\x00\x00\x00"
+               b"\x6c\x7d\xb6\xdd")
+        data = (_ts_packet(0, _pat_section(201, 0x64))
+                + _ts_packet(0x64, pmt))
+        self.assertEqual(autostart._parse_pmt(data, 0x64),
+                         (0x1000, -1, lamedb_fix.CACHE_AC3_AUDIO, 0x1FFF))
+        ref = ("1:0:1:9C43:3235:1F48:0:0:0:0:"
+               "http%3a//0.0.0.0%3a9999/abertis/pid8008:La 1 UHD [8008]")
+        need, pmtpid, message = self._call(autostart._streamrelay_pids,
+                                           data, ref)
+        self.assertIs(need, False)
+        self.assertEqual(pmtpid, 0x64)
+        self.assertIn("pmt=100", message)
+        self.assertIn("vpid=4096", message)
+
+    def test_parse_pmt_still_prefers_a_real_video_stream_type(self):
+        """A 0x06 entry before a real video entry must not win."""
+        pmt = (b"\x02\xb0\x16\x00\x9a\x87\x00\x00"
+               b"\xee\x65\xf0\x00"
+               b"\x06\xee\x66\x00\x00"
+               b"\x02\xee\x67\x00\x00"
+               b"\x01\x02\x03")
+        data = _ts_packet(0x65, pmt)
+        vpid, apid, acache, pcr = autostart._parse_pmt(data, 0x65)
+        self.assertEqual(vpid, 0x0E67)
+        self.assertEqual(apid, 0x0E66)
+        self.assertEqual(pcr, 0x0E65)
+
     def test_play_url_keeps_the_ciefp_reference_with_the_data_pid(self):
         auto = autostart._Auto2026.__new__(autostart._Auto2026)
         auto.busy = False
@@ -1121,6 +1162,31 @@ class RescannedFeedRuntimeTests(unittest.TestCase):
 
         self.assertTrue(ok)
         self.assertFalse(changed)
+
+    def test_the_merge_keeps_the_raw_bytes_of_the_user_file(self):
+        """v1.9.21: the merge must work on raw bytes.
+
+        The box SoftCam.Key holds iso-8859 lines of other providers
+        (measured: a Hotbird line with a raw 0xc7 byte).  DreamOS sets
+        the default codec to utf-8, so the old content.encode("utf-8")
+        crashed there and the Abertis key of the 8008 feed never reached
+        oscam-emu.
+        """
+        self.upper.write_bytes(
+            b"F 03E91F41 00000000 2E4E9511A3155C14 ;ABERTIS 8001\n"
+            b"F 78C5FFDE 00000000 74BF23731C67C034 ;&#304;\xc7 YAPIMLAR\n")
+        with mock.patch.object(setup, "SOFTCAM_KEY", str(self.lower)), \
+                mock.patch.object(setup, "SOFTCAM_KEY_UPPER", str(self.upper)), \
+                mock.patch.object(setup.os, "rename", os.replace):
+            ok, changed = setup.ensure_softcam_key_upper()
+
+        self.assertTrue(ok)
+        self.assertTrue(changed)
+        data = self.upper.read_bytes()
+        self.assertIn(b"F 03F01FFF 00000000 FE6566C9EB28697C", data)
+        self.assertIn(b"\xc7 YAPIMLAR", data)
+        self.assertIn(b"F 78C5FFDE 00000000 74BF23731C67C034", data)
+        self.assertEqual(data.count(b"F 03E91F41"), 1)
 
     def test_the_astra_input_of_the_moved_feed_is_updated(self):
         with mock.patch.object(setup.os, "rename", os.replace):
