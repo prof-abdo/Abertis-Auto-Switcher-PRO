@@ -4,6 +4,12 @@
 # IPK packages (built binaries)
 *.ipk
 
+# DEB packages (built binaries)
+*.deb
+
+# Graphify generated cache
+graphify-out/
+
 # Screenshots / OSD images
 *.png
 
