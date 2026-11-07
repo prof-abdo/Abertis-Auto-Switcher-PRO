@@ -1,4 +1,4 @@
-﻿#!/bin/sh
+#!/bin/sh
 #
 # Abertis Auto Switcher PRO - installer
 #

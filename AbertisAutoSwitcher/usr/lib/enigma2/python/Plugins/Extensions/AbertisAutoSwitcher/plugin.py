@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Abertis Auto Pro - UI and autostart registration.
 
 The engine itself lives in ``autostart.py`` / ``lamedb_fix.py`` /
