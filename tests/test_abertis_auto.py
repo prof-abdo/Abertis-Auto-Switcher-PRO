@@ -1414,6 +1414,84 @@ class AllFeedAutomationTests(unittest.TestCase):
                             autostart._ref_key(dkiss))
         self.assertEqual(autostart._ref_key(la1), autostart._ref_key(la1))
 
+    def test_cut_url_route_trims_after_the_route_digits(self):
+        self.assertEqual(
+            autostart._cut_url_route(
+                "http://0.0.0.0:9999/abertis/pid8008plp0"),
+            "http://0.0.0.0:9999/abertis/pid8008")
+        self.assertEqual(
+            autostart._cut_url_route(
+                "http%3a//0.0.0.0%3a9999/abertis/pid8008plp1"),
+            "http%3a//0.0.0.0%3a9999/abertis/pid8008")
+        self.assertEqual(
+            autostart._cut_url_route(
+                "http://127.0.0.1:9999/abertis/pid2026"),
+            "http://127.0.0.1:9999/abertis/pid2026")
+        self.assertEqual(autostart._cut_url_route("http://host/nothing"),
+                         "http://host/nothing")
+        self.assertEqual(autostart._cut_url_route(""), "")
+
+    def test_fix_url_ref_strips_the_plp_tag(self):
+        raw = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
+               "http%3a//0.0.0.0%3a9999/abertis/pid8008plp0:"
+               "La 2 UHD [8008]")
+        fixed = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
+                 "http%3a//0.0.0.0%3a9999/abertis/pid8008:"
+                 "La 2 UHD [8008]")
+        self.assertEqual(autostart._fix_url_ref(raw), fixed)
+        # already fixed - same reference comes back
+        self.assertEqual(autostart._fix_url_ref(fixed), fixed)
+        # a reference without a url part is left alone
+        plain = "1:0:1:BD2:EA74:1:CE42BD6:0:0:0:"
+        self.assertEqual(autostart._fix_url_ref(plain), plain)
+
+    def test_ref_key_ignores_the_plp_tag(self):
+        plp = ("1:0:1:9C43:3157:1F48:0:0:0:0:"
+               "http%3a//0.0.0.0%3a9999/abertis/pid8008plp0:"
+               "La 1 UHD [8008]")
+        clean = ("1:0:1:9C43:3157:1F48:0:0:0:0:"
+                 "http%3a//0.0.0.0%3a9999/abertis/pid8008:"
+                 "La 1 UHD [8008]")
+        self.assertEqual(autostart._ref_key(plp), autostart._ref_key(clean))
+
+    def test_start_normalises_the_plp_url(self):
+        auto = autostart._Auto2026.__new__(autostart._Auto2026)
+        auto.busy = False
+        auto.attempt = 0
+        auto.disabled = False
+        auto._current_ref = lambda: ""
+        ref = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
+               "http%3a//0.0.0.0%3a9999/abertis/pid8008plp0:"
+               "La 2 UHD [8008]")
+        fixed = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
+                 "http%3a//0.0.0.0%3a9999/abertis/pid8008:"
+                 "La 2 UHD [8008]")
+        info = {"pid": 8008, "sid": 0x03F0,
+                "ref": "1:0:1:3f0:ea68:0:ce4af34:0:0:0:"}
+        with mock.patch.object(autostart, "eServiceReference",
+                               side_effect=lambda value: value), \
+                mock.patch.object(autostart.lamedb_fix,
+                                  "remove_streamrelay_services",
+                                  return_value=(False, "")), \
+                mock.patch.object(autostart.lamedb_fix,
+                                  "get_feed_info", return_value=info), \
+                mock.patch.object(autostart.lamedb_fix,
+                                  "set_feed_mode",
+                                  return_value=(True, "8008 -> F1")) as set_feed, \
+                mock.patch.object(autostart.lamedb_fix,
+                                  "set_2026_mode") as set_2026, \
+                mock.patch.object(auto, "_reload_async") as reload_async:
+            started = auto.start(ref)
+
+        self.assertTrue(started)
+        self.assertEqual(auto.pending_ref, fixed)
+        self.assertEqual(auto.pending_url, fixed)
+        self.assertEqual(auto.last_seen_ref, autostart._ref_key(fixed))
+        self.assertIn(autostart._ref_key(fixed), auto.internal_refs)
+        set_feed.assert_called_once_with("8008", "f1")
+        set_2026.assert_not_called()
+        reload_async.assert_called_once_with("F5", auto._after_reload_f5)
+
     def test_the_feed_of_the_pending_pid_is_not_an_external_change(self):
         auto = autostart._Auto2026.__new__(autostart._Auto2026)
         auto.pending_ref = ("1:0:1:1F8:2BD6:7E9:0:0:0:0:"

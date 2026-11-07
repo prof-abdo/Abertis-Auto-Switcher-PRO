@@ -108,6 +108,43 @@ def _is_url(ref):
     return bool(URL_RE.search(ref or ""))
 
 
+def _cut_url_route(url):
+    """Trim a streamrelay URL down to the astra route ``/abertis/pid``.
+
+    The new ciefp settings append a PLP tag to the URL of the UHD
+    channels (``/abertis/pid8008plp0``).  Astra serves only the plain
+    pid route and answers 404 to everything else, so the pid prefix and
+    everything before it are kept and the rest is dropped.  A URL
+    without the route is returned unchanged.
+    """
+    if not url:
+        return url
+    match = URL_RE.search(url)
+    if match:
+        return url[:match.end()]
+    return url
+
+
+def _fix_url_ref(ref):
+    """Rewrite the PLP url of a streamrelay reference in place.
+
+    The reference keeps its url-encoding: only the characters after the
+    route digits are removed (``...pid8008plp0`` -> ``...pid8008``).
+    References without a url part come back unchanged.
+    """
+    try:
+        parts = (ref or "").split(":", 11)
+        if len(parts) < 12 or not parts[10].startswith("http"):
+            return ref
+        fixed = _cut_url_route(parts[10])
+        if fixed == parts[10]:
+            return ref
+        parts[10] = fixed
+        return ":".join(parts)
+    except Exception:
+        return ref
+
+
 def _skipped_pid(ref):
     """Return the PID when this URL is on the no-signal skip list."""
     match = URL_RE.search(ref or "")
@@ -503,9 +540,13 @@ def _ref_key(ref):
     try:
         parts = (ref or "").split(":", 11)
         if len(parts) >= 11 and parts[10].startswith("http"):
+            # v1.9.19: the ciefp PLP suffix must not make the same feed
+            # look like a different channel: ...pid8008plp0 and
+            # ...pid8008 are one and the same astra route.
+            url = _cut_url_route(parts[10])
             if len(parts) > 11 and parts[11]:
-                return parts[10] + "|" + parts[11]
-            return parts[10]
+                return url + "|" + parts[11]
+            return url
     except Exception:
         pass
     return (ref or "").upper()
@@ -721,6 +762,11 @@ class _Auto2026(object):
             self.last_seen_ref = _ref_key(url_ref)
             logger.log("Abertis URL pid %s skipped (no signal)" % skip)
             return False
+        raw_ref = url_ref
+        url_ref = _fix_url_ref(url_ref)
+        if url_ref != raw_ref:
+            logger.log("Abertis streamrelay url normalised (ciefp PLP tag "
+                       "dropped): %s" % url_ref)
         try:
             self.pending_url = eServiceReference(url_ref)
         except Exception as e:
@@ -729,6 +775,10 @@ class _Auto2026(object):
         self.pending_ref = url_ref
         self.pending_pmtpid = None
         self.internal_refs = set([_ref_key(url_ref)])
+        # The caller keyed the raw reference; the sequence plays the fixed
+        # one, so the poller must not start the same channel again after
+        # the normalised zap.
+        self.last_seen_ref = _ref_key(url_ref)
         # Leftovers of older versions: a streamrelay entry in the lamedb
         # keeps the proxy channel black on DreamOS 2.6.  The removal is
         # picked up by the reload of the F5 phase, no extra reload needed.
@@ -972,6 +1022,9 @@ class _Auto2026(object):
             # local.  Normalize only the sync read, never the played ref.
             url = url.replace("//0.0.0.0:", "//127.0.0.1:")
             url = url.replace("//localhost:", "//127.0.0.1:")
+            # v1.9.19: fetch only the astra route - a PLP tag behind the
+            # pid (pid8008plp0) answers 404.
+            url = _cut_url_route(url)
 
         def worker():
             try:
