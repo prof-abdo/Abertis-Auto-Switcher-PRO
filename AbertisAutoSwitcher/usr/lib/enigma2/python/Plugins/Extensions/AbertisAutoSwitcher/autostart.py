@@ -68,7 +68,8 @@ FEED_SETTLE = 8.0       # seconds after zapping the F5 feed before reading Astra
 SIBLING_SETTLE = 3.5    # seconds between the sibling feed zap and the feed zap
 CW_TIMEOUT = 12.0       # seconds to wait for the BISS key (the A-rule is fast)
 CW_SETTLE = 2.0         # seconds after the key was seen before the F5 phase
-OSCAM_LOGS = ("/tmp/oscam.log", "/var/log/oscam.log", "/var/log/oscam/oscam.log")
+OSCAM_LOGS = ("/tmp/oscam-emu.log", "/tmp/oscam.log", "/var/log/oscam.log",
+              "/var/log/oscam/oscam.log")
 URL_SETTLE = 6.0        # seconds before verifying URL playback
 VERIFY_TRIES = 4        # extra checks before a playback is called failed
 VERIFY_INTERVAL = 1.5   # seconds between two playback checks
@@ -735,6 +736,40 @@ class _Auto2026(object):
                     return False
         except Exception:
             pass
+        # v1.9.22: a new URL on the same feed PID (e.g. switching La 1 UHD
+        # to La 2 UHD while pid 8008 is still in F1) is not an external
+        # change: the sequence only zaps a different proxy reference at its
+        # end, so cancelling it would needlessly restart the whole F1/F5
+        # learning cycle and leave the feed hanging in F1.
+        try:
+            new_match = URL_RE.search(ref or "")
+            old_match = URL_RE.search(self.pending_ref or "")
+            if new_match and old_match and (
+                    new_match.group(1) == old_match.group(1)):
+                return False
+        except Exception:
+            pass
+        return True
+
+    def _retarget_pending(self, ref):
+        """Point the running sequence at a new URL of the same feed PID."""
+        raw_ref = ref
+        url_ref = _fix_url_ref(ref)
+        if url_ref != raw_ref:
+            logger.log("Abertis streamrelay url normalised (ciefp PLP tag "
+                       "dropped): %s" % url_ref)
+        try:
+            self.pending_url = eServiceReference(url_ref)
+        except Exception as e:
+            logger.log("Abertis URL ref invalid: %s" % e)
+            return False
+        self.pending_ref = url_ref
+        key = _ref_key(url_ref)
+        if key:
+            self.internal_refs.add(key)
+            self.last_seen_ref = key
+        logger.log("Abertis same-feed URL retargeted (no F1 restart): %s"
+                   % url_ref)
         return True
 
     def _on_service_started(self, *args):
@@ -745,14 +780,19 @@ class _Auto2026(object):
             ref = self._current_ref()
         cancelled = False
         if self.busy:
-            # A user selecting another service must not wait for a dead 8008
-            # feed to exhaust its sync retries.  The plugin's own feed/URL
-            # zaps are in internal_refs and are ignored here.
             if self._is_external_ref(ref):
                 logger.log("Abertis service changed while busy - cancelling "
                            "the current sequence")
                 self._cancel()
                 cancelled = True
+            elif _ref_key(ref) != _ref_key(self.pending_ref):
+                # v1.9.22: same-feed URL switch (e.g. La 1 UHD -> La 2 UHD):
+                # retarget the running sequence instead of aborting it in F1.
+                try:
+                    self._retarget_pending(ref)
+                except Exception as e:
+                    logger.log("Abertis retarget failed: %s" % e)
+                return
             else:
                 return
         key = _ref_key(ref)
@@ -782,6 +822,14 @@ class _Auto2026(object):
                            "cancelling the current sequence")
                 self._cancel()
                 cancelled = True
+            elif _ref_key(ref) != _ref_key(self.pending_ref):
+                # v1.9.22: same-feed URL switch while busy: retarget the
+                # running sequence in place instead of restarting F1/F5.
+                try:
+                    self._retarget_pending(ref)
+                except Exception as e:
+                    logger.log("Abertis retarget failed: %s" % e)
+                return
             else:
                 return
         key = _ref_key(ref)

@@ -1623,6 +1623,58 @@ class AllFeedAutomationTests(unittest.TestCase):
         self.assertFalse(auto.busy)
         auto.start.assert_called_once_with(next_ref)
 
+    def test_same_pid_switch_does_not_restart_the_sequence(self):
+        """v1.9.22: La 1 UHD -> La 2 UHD shares pid 8008.
+
+        Cancelling the sequence restarts the whole F1/F5 learning cycle
+        (two webif reloads, a feed zap, a 12 s BISS wait) and leaves the
+        feed hanging in F1 - the exact complaint on the box.  Only the
+        final proxy URL may change.
+        """
+        auto = autostart._Auto2026.__new__(autostart._Auto2026)
+        auto.busy = True
+        auto.state = "cw"
+        auto.pending_ref = ("1:0:1:9C43:3157:1F48:0:0:0:0:"
+                            "http%3a//0.0.0.0%3a9999/abertis/pid8008plp0:La 1 UHD [8008]")
+        auto.pending_url = None
+        auto.pending_pmtpid = None
+        auto.step_timer = mock.Mock()
+        auto.zap_ref = ""
+        auto.zap_callback = None
+        auto.internal_refs = set()
+        auto.last_seen_ref = autostart._ref_key(auto.pending_ref)
+        auto.retry_until = 0
+        auto.feed_mode = "f1"
+        next_ref = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
+                    "http%3a//0.0.0.0%3a9999/abertis/pid8008plp0:La 2 UHD [8008]")
+        fixed_next = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
+                      "http%3a//0.0.0.0%3a9999/abertis/pid8008:La 2 UHD [8008]")
+        auto._current_ref = lambda: next_ref
+        auto.start = mock.Mock()
+        with mock.patch.object(autostart, "eServiceReference",
+                               side_effect=lambda value: value):
+            auto._poll()
+
+        self.assertTrue(auto.busy)  # still running, not cancelled
+        self.assertEqual(auto.state, "cw")
+        self.assertEqual(auto.feed_mode, "f1")  # feed mode untouched
+        self.assertEqual(auto.pending_ref, fixed_next)
+        auto.start.assert_not_called()
+        self.assertEqual(auto.last_seen_ref, autostart._ref_key(fixed_next))
+        self.assertIn(autostart._ref_key(fixed_next), auto.internal_refs)
+
+    def test_oscam_emu_log_is_watched_for_the_biss_key(self):
+        """v1.9.22: the box logs to /tmp/oscam-emu.log.
+
+        Without it in OSCAM_LOGS, _oscam_path() returns the nonexistent
+        /tmp/oscam.log and _has_cw() is always False, so every F1 phase
+        ends in the 12 s "no BISS key" timeout.
+        """
+        self.assertIn("/tmp/oscam-emu.log", autostart.OSCAM_LOGS)
+        self.assertLess(
+            autostart.OSCAM_LOGS.index("/tmp/oscam-emu.log"),
+            autostart.OSCAM_LOGS.index("/tmp/oscam.log"))
+
 
 class ToolSharedLibsTests(unittest.TestCase):
     """v1.9.14: libdvbcsa.so.1 provisioning - never brick a working astra."""
