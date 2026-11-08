@@ -610,6 +610,83 @@ def ensure_astra_feed_refs(config_path=None, backup_path=None):
     return True, True, "astra.conf feed references updated: %s" % "; ".join(changed)
 
 
+def astra_t2mi_blocks(pid="8008"):
+    """Build the second astra stage for a T2-MI/PLP feed.
+
+    The intermediate ``/abertis/pid`` route of the feed is only the raw
+    T2-MI stream: its PMT is a single private PES (type 0x06 on
+    pid 0x1000) and Enigma2 can never decode it (vpid=-1).  The
+    decapsulated programme lives on ``/abertis/pid<PLP>`` through
+    ``make_t2mi_decap`` (measured on the box: plp 0, pnr 0, pid 4096).
+    """
+    pid = str(int(pid))
+    if pid == "8008":
+        return (
+            'f12583abertis0 = make_t2mi_decap({\n'
+            '  name = "Abertis PID 8008",\n'
+            '  input = "http://0.0.0.0:9999/abertis/pid8008",\n'
+            '  plp = 0,\n'
+            '  pnr = 0,\n'
+            '  pid = 4096,\n'
+            '})\n'
+            '\n'
+            'make_channel({\n'
+            '  name = "12583plp0",\n'
+            '  input = {\n'
+            '    "t2mi://f12583abertis0",\n'
+            '  },\n'
+            '  output = {\n'
+            '    "http://0.0.0.0:9999/abertis/pid8008plp0",\n'
+            '  },\n'
+            '})\n'
+        )
+    return ""
+
+
+def ensure_astra_t2mi_blocks(config_path=None, backup_path=None):
+    """Append the second astra stage (t2mi_decap -> pid plp0) for 8008.
+
+    Idempotent: when the final route ``/abertis/pid8008plp0`` already
+    exists, nothing is touched.  A one-time backup is created before the
+    first append.  Returns ``(ok, changed, message)``.
+    """
+    config_path = config_path or ASTRA_CONF
+    backup_path = backup_path or ASTRA_CONF_BACKUP
+    if not os.path.exists(config_path):
+        return False, False, "ERROR: astra.conf not found: %s" % config_path
+    try:
+        with open(config_path, "rb") as f:
+            original = f.read()
+        content = original.decode("latin-1", "replace")
+    except Exception as e:
+        return False, False, "ERROR reading astra.conf: %s" % e
+
+    if "/abertis/pid8008plp0" in content and "make_t2mi_decap" in content:
+        return True, False, "astra.conf already has the T2-MI decap chain for pid 8008 (plp0)"
+
+    blocks = astra_t2mi_blocks("8008")
+    if not blocks:
+        return True, False, "no T2-MI chain for this build"
+
+    if not os.path.exists(backup_path):
+        try:
+            shutil.copy2(config_path, backup_path)
+        except Exception as e:
+            return False, False, "ERROR creating astra.conf backup: %s" % e
+
+    content = content.rstrip("\n") + "\n\n"
+    content += blocks
+    try:
+        mode = stat.S_IMODE(os.stat(config_path).st_mode)
+    except Exception:
+        mode = 0o644
+    try:
+        _atomic_write(config_path, content.encode("latin-1"), mode)
+    except Exception as e:
+        return False, False, "ERROR writing astra.conf: %s" % e
+    return True, True, "astra.conf: added T2-MI decap chain for pid 8008 (plp0 -> pid8008plp0)"
+
+
 def astra_pids():
     """Return the PIDs of the running astra processes."""
     try:
@@ -1603,6 +1680,13 @@ def run_full_setup(restart_configs=True):
         ref_ok, ref_changed, ref_message = ensure_astra_feed_refs()
         logger.log(ref_message)
         if ref_changed:
+            astra_changed = True
+        # v1.9.24: second astra stage for the T2-MI UHD feed - without
+        # it the ciefp pid8008plp0 route does not exist (404) and the
+        # raw intermediate T2-MI stream (private PES) is unplayable.
+        t2mi_ok, t2mi_changed, t2mi_message = ensure_astra_t2mi_blocks()
+        logger.log(t2mi_message)
+        if t2mi_changed:
             astra_changed = True
         if astra_changed:
             if restart_configs:

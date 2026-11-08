@@ -1362,6 +1362,41 @@ class AstraConfigGeneratorTests(unittest.TestCase):
         self.assertEqual(self.config.read_text(encoding="ascii").count(
             "make_channel({"), 2)
 
+    def test_t2mi_blocks_decap_the_intermediate_stream(self):
+        """v1.9.24: /abertis/pid8008 is the raw T2-MI stream (private
+        PES on pid 0x1000, pmt 100).  The ciefp URLs address the SECOND
+        stage: make_t2mi_decap (plp 0, pnr 0, pid 4096) decoded onto
+        /abertis/pid8008plp0."""
+        blocks = setup.astra_t2mi_blocks("8008")
+        self.assertIn("f12583abertis0 = make_t2mi_decap(", blocks)
+        self.assertIn('input = "http://0.0.0.0:9999/abertis/pid8008"', blocks)
+        self.assertIn("plp = 0,", blocks)
+        self.assertIn("pnr = 0,", blocks)
+        self.assertIn("pid = 4096,", blocks)
+        self.assertIn('"t2mi://f12583abertis0"', blocks)
+        self.assertIn('"http://0.0.0.0:9999/abertis/pid8008plp0"', blocks)
+        self.assertIn('name = "12583plp0"', blocks)
+
+    def test_astra_t2mi_blocks_added_once(self):
+        with mock.patch.object(setup.os, "rename", os.replace):
+            ok, changed, message = setup.ensure_astra_t2mi_blocks(
+                str(self.config), str(self.backup))
+        self.assertTrue(ok, message)
+        self.assertTrue(changed)
+        text = self.config.read_text(encoding="ascii")
+        self.assertIn("f12583abertis0 = make_t2mi_decap(", text)
+        self.assertIn("/abertis/pid8008plp0", text)
+        self.assertTrue(self.backup.exists())
+
+        with mock.patch.object(setup.os, "rename", os.replace):
+            ok, changed, message = setup.ensure_astra_t2mi_blocks(
+                str(self.config), str(self.backup))
+        self.assertTrue(ok, message)
+        self.assertFalse(changed)
+        text = self.config.read_text(encoding="ascii")
+        self.assertEqual(text.count("make_t2mi_decap("), 1)
+        self.assertEqual(text.count("/abertis/pid8008plp0"), 1)
+
 
 class AllFeedAutomationTests(unittest.TestCase):
     def test_2025_url_starts_with_f1_learning_and_its_own_feed(self):
@@ -1507,15 +1542,15 @@ class AllFeedAutomationTests(unittest.TestCase):
                             autostart._ref_key(dkiss))
         self.assertEqual(autostart._ref_key(la1), autostart._ref_key(la1))
 
-    def test_cut_url_route_trims_after_the_route_digits(self):
+    def test_cut_url_route_preserves_the_plp_tag(self):
         self.assertEqual(
             autostart._cut_url_route(
                 "http://0.0.0.0:9999/abertis/pid8008plp0"),
-            "http://0.0.0.0:9999/abertis/pid8008")
+            "http://0.0.0.0:9999/abertis/pid8008plp0")
         self.assertEqual(
             autostart._cut_url_route(
                 "http%3a//0.0.0.0%3a9999/abertis/pid8008plp1"),
-            "http%3a//0.0.0.0%3a9999/abertis/pid8008")
+            "http%3a//0.0.0.0%3a9999/abertis/pid8008plp1")
         self.assertEqual(
             autostart._cut_url_route(
                 "http://127.0.0.1:9999/abertis/pid2026"),
@@ -1524,16 +1559,14 @@ class AllFeedAutomationTests(unittest.TestCase):
                          "http://host/nothing")
         self.assertEqual(autostart._cut_url_route(""), "")
 
-    def test_fix_url_ref_strips_the_plp_tag(self):
+    def test_fix_url_ref_keeps_the_plp_tag(self):
         raw = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
                "http%3a//0.0.0.0%3a9999/abertis/pid8008plp0:"
                "La 2 UHD [8008]")
-        fixed = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
-                 "http%3a//0.0.0.0%3a9999/abertis/pid8008:"
-                 "La 2 UHD [8008]")
-        self.assertEqual(autostart._fix_url_ref(raw), fixed)
-        # already fixed - same reference comes back
-        self.assertEqual(autostart._fix_url_ref(fixed), fixed)
+        # v1.9.24: the plp tag addresses the decapsulated programme
+        # (second astra stage); the plain route is the still-encoded
+        # intermediate T2-MI stream.  Both stay as fetched.
+        self.assertEqual(autostart._fix_url_ref(raw), raw)
         # a reference without a url part is left alone
         plain = "1:0:1:BD2:EA74:1:CE42BD6:0:0:0:"
         self.assertEqual(autostart._fix_url_ref(plain), plain)
@@ -1556,9 +1589,10 @@ class AllFeedAutomationTests(unittest.TestCase):
         ref = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
                "http%3a//0.0.0.0%3a9999/abertis/pid8008plp0:"
                "La 2 UHD [8008]")
-        fixed = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
-                 "http%3a//0.0.0.0%3a9999/abertis/pid8008:"
-                 "La 2 UHD [8008]")
+        # v1.9.24: the plp tag addresses the DECODED programme (second
+        # astra stage make_t2mi_decap plp 0/pid 4096).  The reference
+        # must be played and synced exactly as it comes from ciefp.
+        fixed = ref
         info = {"pid": 8008, "sid": 0x03F0,
                 "ref": "1:0:1:3f0:ea68:0:ce4af34:0:0:0:"}
         with mock.patch.object(autostart, "eServiceReference",
@@ -1647,8 +1681,9 @@ class AllFeedAutomationTests(unittest.TestCase):
         auto.feed_mode = "f1"
         next_ref = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
                     "http%3a//0.0.0.0%3a9999/abertis/pid8008plp0:La 2 UHD [8008]")
-        fixed_next = ("1:0:1:9C41:3235:1F48:0:0:0:0:"
-                      "http%3a//0.0.0.0%3a9999/abertis/pid8008:La 2 UHD [8008]")
+        # v1.9.24: the plp tag is kept - it addresses the decapsulated
+        # astra output (second stage make_t2mi_decap).
+        fixed_next = next_ref
         auto._current_ref = lambda: next_ref
         auto.start = mock.Mock()
         with mock.patch.object(autostart, "eServiceReference",

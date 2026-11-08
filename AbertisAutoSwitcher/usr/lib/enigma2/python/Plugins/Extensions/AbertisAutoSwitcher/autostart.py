@@ -50,7 +50,8 @@ FEED_REF = FEED_REFS["2026"]
 FEED_TAG = "BD2:EA74"
 URL_TAGS = ("pid2026", "pid2050", "pid8001")
 URL_TAG = "pid2026"  # backwards-compatible alias
-URL_RE = re.compile(r"/abertis/pid(\d+)", re.IGNORECASE)
+URL_RE = re.compile(r"/abertis/pid(\d+)(plp\d+)?", re.IGNORECASE)
+_ROUTE_RE = URL_RE
 # Permanently skipped feeds.  8008 is intentionally not listed: La 1 UHD,
 # Clan HD, DKISS and the other channels on that feed must get the normal
 # F1/F5 attempt even while the feed is currently off-air.  A failed attempt
@@ -110,13 +111,16 @@ def _is_url(ref):
 
 
 def _cut_url_route(url):
-    """Trim a streamrelay URL down to the astra route ``/abertis/pid``.
+    """Trim a streamrelay URL down to the astra route (pid + optional PLP).
 
-    The new ciefp settings append a PLP tag to the URL of the UHD
-    channels (``/abertis/pid8008plp0``).  Astra serves only the plain
-    pid route and answers 404 to everything else, so the pid prefix and
-    everything before it are kept and the rest is dropped.  A URL
-    without the route is returned unchanged.
+    The ciefp UHD channels address the decapsulated astra output
+    (``/abertis/pid8008plp0``): it is the SECOND stage of the astra
+    chain (``make_t2mi_decap`` on the intermediate
+    ``/abertis/pid8008`` T2-MI stream).  Trimming the PLP tag (as
+    v1.9.19 did) hits the intermediate stream whose PMT is a single
+    private PES on pid 0x1000 - the raw T2-MI bearer, not the clear
+    programme.  Anything after the route (``?query`` etc.) is dropped;
+    a URL without the route comes back unchanged.
     """
     if not url:
         return url
@@ -127,11 +131,13 @@ def _cut_url_route(url):
 
 
 def _fix_url_ref(ref):
-    """Rewrite the PLP url of a streamrelay reference in place.
+    """Trim a streamrelay reference URL down to the astra route.
 
-    The reference keeps its url-encoding: only the characters after the
-    route digits are removed (``...pid8008plp0`` -> ``...pid8008``).
-    References without a url part come back unchanged.
+    Keeps the ciefp PLP tag (``...pid8008plp0``): with the two-stage
+    astra chain (v1.9.24) that route is the decapsulated programme,
+    while the plain ``...pid8008`` route is the still-encoded
+    intermediate T2-MI stream.  Only trailing junk after the route is
+    dropped.  References without a url part come back unchanged.
     """
     try:
         parts = (ref or "").split(":", 11)
@@ -589,10 +595,14 @@ def _ref_key(ref):
     try:
         parts = (ref or "").split(":", 11)
         if len(parts) >= 11 and parts[10].startswith("http"):
-            # v1.9.19: the ciefp PLP suffix must not make the same feed
-            # look like a different channel: ...pid8008plp0 and
-            # ...pid8008 are one and the same astra route.
+            # v1.9.24: plp and plain routes are now distinct streams
+            # (intermediate vs decapsulated), but the logical channel
+            # (same name, same feed pid) must still canonicalize to one
+            # poll key, so the plp suffix is ignored here exactly as in
+            # v1.9.19.  The fetch path keeps it via _cut_url_route.
             url = _cut_url_route(parts[10])
+            url = re.sub(r"/abertis/pid(\d+)plp\d+", r"/abertis/pid\1",
+                         url, flags=re.I)
             if len(parts) > 11 and parts[11]:
                 return url + "|" + parts[11]
             return url
@@ -756,8 +766,7 @@ class _Auto2026(object):
         raw_ref = ref
         url_ref = _fix_url_ref(ref)
         if url_ref != raw_ref:
-            logger.log("Abertis streamrelay url normalised (ciefp PLP tag "
-                       "dropped): %s" % url_ref)
+            logger.log("Abertis streamrelay url normalised: %s" % url_ref)
         try:
             self.pending_url = eServiceReference(url_ref)
         except Exception as e:
@@ -869,8 +878,7 @@ class _Auto2026(object):
         raw_ref = url_ref
         url_ref = _fix_url_ref(url_ref)
         if url_ref != raw_ref:
-            logger.log("Abertis streamrelay url normalised (ciefp PLP tag "
-                       "dropped): %s" % url_ref)
+            logger.log("Abertis streamrelay url normalised: %s" % url_ref)
         try:
             self.pending_url = eServiceReference(url_ref)
         except Exception as e:
@@ -948,6 +956,23 @@ class _Auto2026(object):
             ref_message = "ERROR: %s" % e
         if ref_changed:
             logger.log("Abertis: %s - restarting astra" % ref_message)
+            try:
+                ok, message = setup.controlled_astra_restart()
+                logger.log(message)
+            except Exception as e:
+                logger.log("Abertis astra restart failed: %s" % e)
+        # v1.9.24: the UHD ciefp URLs address the decapsulated astra
+        # output (/abertis/pid8008plp0).  Without the second stage
+        # (make_t2mi_decap, see setup.ensure_astra_t2mi_blocks) that
+        # route does not exist and astra serves 404 or the raw T2-MI
+        # stream (private PES on pid 0x1000), which Enigma2 cannot play.
+        try:
+            ok, t2mi_changed, t2mi_message = setup.ensure_astra_t2mi_blocks()
+        except Exception as e:
+            t2mi_changed = False
+            t2mi_message = "ERROR: %s" % e
+        if t2mi_changed:
+            logger.log("Abertis: %s - restarting astra" % t2mi_message)
             try:
                 ok, message = setup.controlled_astra_restart()
                 logger.log(message)
@@ -1126,8 +1151,10 @@ class _Auto2026(object):
             # local.  Normalize only the sync read, never the played ref.
             url = url.replace("//0.0.0.0:", "//127.0.0.1:")
             url = url.replace("//localhost:", "//127.0.0.1:")
-            # v1.9.19: fetch only the astra route - a PLP tag behind the
-            # pid (pid8008plp0) answers 404.
+            # v1.9.24: fetch only the astra route, keeping the PLP tag -
+            # /abertis/pid8008plp0 is the decapsulated programme of the
+            # two-stage astra chain (make_t2mi_decap plp 0/pid 4096 on top
+            # of the intermediate /abertis/pid8008 T2-MI stream).
             url = _cut_url_route(url)
 
         def worker():
