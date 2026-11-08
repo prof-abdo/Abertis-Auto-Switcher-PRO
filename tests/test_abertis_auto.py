@@ -1663,6 +1663,40 @@ class AllFeedAutomationTests(unittest.TestCase):
         self.assertEqual(auto.last_seen_ref, autostart._ref_key(fixed_next))
         self.assertIn(autostart._ref_key(fixed_next), auto.internal_refs)
 
+    def test_the_feed_zap_of_the_sequence_itself_does_not_retarget(self):
+        """The feed zap ref is a non-URL ref whose key != pending URL key.
+
+        Retargeting it would replace pending_ref with the feed ref, kill
+        the feed PID and let _go_playback fail with \"ERROR: invalid
+        Abertis PID\" (seen on the box, 03:52).
+        """
+        auto = autostart._Auto2026.__new__(autostart._Auto2026)
+        auto.busy = True
+        auto.state = "cw"
+        auto.pending_ref = ("1:0:1:9C43:3157:1F48:0:0:0:0:"
+                            "http%3a//0.0.0.0%3a9999/abertis/pid8008:La 1 UHD [8008]")
+        auto.pending_url = None
+        auto.pending_pmtpid = None
+        auto.step_timer = mock.Mock()
+        auto.zap_ref = ""
+        auto.zap_callback = None
+        feed_ref = "1:0:1:3F0:EA68:0:CE4B127:0:0:0:"
+        auto.internal_refs = set([autostart._ref_key(feed_ref)])
+        auto.last_seen_ref = autostart._ref_key(auto.pending_ref)
+        auto.retry_until = 0
+        auto._current_ref = lambda: feed_ref
+        auto.start = mock.Mock()
+        with mock.patch.object(autostart.lamedb_fix, "get_feed_ref",
+                               return_value=feed_ref):
+            auto._poll()
+
+        self.assertTrue(auto.busy)
+        self.assertEqual(auto.pending_ref, autostart._fix_url_ref(
+            auto.pending_ref) or auto.pending_ref)
+        self.assertIn("pid8008", auto.pending_ref)
+        self.assertNotEqual(auto.pending_ref, feed_ref)
+        auto.start.assert_not_called()
+
     def test_oscam_emu_log_is_watched_for_the_biss_key(self):
         """v1.9.22: the box logs to /tmp/oscam-emu.log.
 

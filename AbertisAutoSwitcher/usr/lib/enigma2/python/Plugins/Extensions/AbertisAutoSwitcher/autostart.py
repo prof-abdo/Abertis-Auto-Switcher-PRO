@@ -788,10 +788,14 @@ class _Auto2026(object):
             elif _ref_key(ref) != _ref_key(self.pending_ref):
                 # v1.9.22: same-feed URL switch (e.g. La 1 UHD -> La 2 UHD):
                 # retarget the running sequence instead of aborting it in F1.
-                try:
-                    self._retarget_pending(ref)
-                except Exception as e:
-                    logger.log("Abertis retarget failed: %s" % e)
+                # Only retarget a real URL of the same feed PID - the feed
+                # zap of the sequence itself (non-URL ref, key != internal)
+                # must never retarget. internal zaps are skipped by default
+                if _is_url(ref):
+                    try:
+                        self._retarget_pending(ref)
+                    except Exception as e:
+                        logger.log("Abertis retarget failed: %s" % e)
                 return
             else:
                 return
@@ -825,10 +829,14 @@ class _Auto2026(object):
             elif _ref_key(ref) != _ref_key(self.pending_ref):
                 # v1.9.22: same-feed URL switch while busy: retarget the
                 # running sequence in place instead of restarting F1/F5.
-                try:
-                    self._retarget_pending(ref)
-                except Exception as e:
-                    logger.log("Abertis retarget failed: %s" % e)
+                # Only retarget a real URL of the same feed PID - the feed
+                # zap of the sequence itself (non-URL ref, key != pending)
+                # must never retarget. internal zaps are skipped by default.
+                if _is_url(ref):
+                    try:
+                        self._retarget_pending(ref)
+                    except Exception as e:
+                        logger.log("Abertis retarget failed: %s" % e)
                 return
             else:
                 return
